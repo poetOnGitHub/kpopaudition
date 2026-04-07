@@ -495,6 +495,7 @@
   function initIntro() {
     var overlay = document.getElementById('introOverlay');
     var skipBtn = document.getElementById('introSkip');
+    var enterPrompt = document.getElementById('introEnter');
     if (!overlay) { initMain(); return; }
 
     // Skip intro for reduced motion preference
@@ -508,18 +509,23 @@
     var lines = overlay.querySelectorAll('.intro-line');
     var audioCtx = null;
     var introComplete = false;
+    var sequenceStarted = false;
 
-    // Web Audio API sound generator
-    function createAudioContext() {
+    // Create AudioContext only after user gesture
+    function ensureAudioContext() {
+      if (audioCtx) {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        return;
+      }
       try {
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       } catch (e) {
-        // Audio not available, continue silently
+        // Audio not supported
       }
     }
 
     function playTone(freq, duration, volume, type) {
-      if (!audioCtx) return;
+      if (!audioCtx || audioCtx.state !== 'running') return;
       try {
         var osc = audioCtx.createOscillator();
         var gain = audioCtx.createGain();
@@ -534,15 +540,13 @@
       } catch (e) {}
     }
 
-    // Chatroom-style sounds
     function playBootSound() {
       playTone(200, 0.15, 0.04, 'square');
       setTimeout(function () { playTone(300, 0.1, 0.03, 'square'); }, 80);
     }
 
     function playTypeSound() {
-      var freq = 800 + Math.random() * 400;
-      playTone(freq, 0.03, 0.02, 'square');
+      playTone(800 + Math.random() * 400, 0.03, 0.02, 'square');
     }
 
     function playConnectSound() {
@@ -557,17 +561,21 @@
     }
 
     function playWelcomeChime() {
-      var notes = [523, 659, 784, 1047];
-      notes.forEach(function (note, i) {
-        setTimeout(function () {
-          playTone(note, 0.4, 0.05, 'sine');
-        }, i * 150);
+      [523, 659, 784, 1047].forEach(function (note, i) {
+        setTimeout(function () { playTone(note, 0.4, 0.05, 'sine'); }, i * 150);
       });
     }
 
-    // Run the intro sequence
-    function runIntro() {
-      createAudioContext();
+    // Start the boot sequence (called after user click)
+    function startSequence() {
+      if (sequenceStarted) return;
+      sequenceStarted = true;
+
+      // Hide the "click to enter" prompt
+      if (enterPrompt) enterPrompt.classList.add('hidden');
+
+      // Create audio context now (inside user gesture)
+      ensureAudioContext();
       playBootSound();
 
       lines.forEach(function (line, index) {
@@ -576,34 +584,29 @@
           if (introComplete) return;
           line.classList.add('visible');
 
-          // Play sounds per line
           if (index < 5) {
-            // Typing sounds for regular lines
             for (var i = 0; i < 3; i++) {
-              setTimeout(function () {
-                if (!introComplete) playTypeSound();
-              }, i * 60);
+              (function (j) {
+                setTimeout(function () {
+                  if (!introComplete) playTypeSound();
+                }, j * 60);
+              })(i);
             }
           }
-          if (index === 3) {
-            playNotificationSound();
-          }
-          if (index === 5) {
-            playConnectSound();
-          }
-          if (index === 6) {
-            playWelcomeChime();
-          }
+          if (index === 3) playNotificationSound();
+          if (index === 5) playConnectSound();
+          if (index === 6) playWelcomeChime();
         }, delay);
       });
 
-      // Fade out intro after last line
+      // Auto-finish after last line
       setTimeout(function () {
         if (!introComplete) finishIntro();
       }, 6800);
     }
 
     function finishIntro() {
+      if (introComplete) return;
       introComplete = true;
       overlay.classList.add('fade-out');
       document.body.classList.remove('intro-active');
@@ -613,35 +616,24 @@
       initMain();
     }
 
-    // Skip button
-    skipBtn.addEventListener('click', finishIntro);
-
-    // Also skip on Escape
-    document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape' && !introComplete) finishIntro();
+    // Click anywhere on the overlay starts the sequence
+    overlay.addEventListener('click', function (e) {
+      if (e.target === skipBtn) return;
+      startSequence();
     });
 
-    // Start on first user interaction (needed for audio context)
-    var started = false;
-    function startOnInteraction() {
-      if (started) return;
-      started = true;
-      runIntro();
-    }
+    // Skip button ends immediately
+    skipBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      finishIntro();
+    });
 
-    // Try to auto-start, fall back to click
-    if (document.hidden === false || document.hidden === undefined) {
-      runIntro();
-      started = true;
-    }
-
-    document.addEventListener('click', function () {
-      if (!started) startOnInteraction();
-      // Resume audio context if suspended
-      if (audioCtx && audioCtx.state === 'suspended') {
-        audioCtx.resume();
-      }
-    }, { once: false });
+    // Escape skips
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && !introComplete) finishIntro();
+      // Any key starts the sequence if not started
+      if (!sequenceStarted && !introComplete) startSequence();
+    });
   }
 
   function initMain() {

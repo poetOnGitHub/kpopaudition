@@ -1520,6 +1520,52 @@ select.form-input option {
   border-color: var(--accent-cyan);
 }
 
+/* Click to Enter prompt */
+.intro-enter {
+  position: absolute;
+  bottom: 25%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  text-align: center;
+  cursor: pointer;
+  transition: opacity 0.4s ease;
+}
+
+.intro-enter.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.intro-enter-text {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  animation: enter-fade 2s ease-in-out infinite;
+}
+
+.intro-enter-pulse {
+  display: block;
+  width: 8px;
+  height: 8px;
+  margin: 12px auto 0;
+  border-radius: 50%;
+  background: var(--accent-cyan);
+  animation: enter-pulse 2s ease-in-out infinite;
+}
+
+@keyframes enter-fade {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+@keyframes enter-pulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 4px var(--accent-cyan); }
+  50% { transform: scale(1.4); box-shadow: 0 0 12px var(--accent-cyan), 0 0 24px var(--accent-glow); }
+}
+
 /* Sparkles */
 .intro-sparkles {
   position: absolute;
