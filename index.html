@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>7th Room — Are You Ready to Be Found?</title>
-  <meta name="description" content="Global audition for a new kind of girl group. 7 girls, 7 countries, 1 digital space. We are looking for connection.">
-  <meta property="og:title" content="7th Room — Global Audition">
-  <meta property="og:description" content="Are you ready to be found? We are looking for connection.">
+  <title>7th Room | Are You Ready to Be Found?</title>
+  <meta name="description" content="Global audition for a new kind of girl group. 7 girls, 7 countries, 1 digital space. We're looking for connection.">
+  <meta property="og:title" content="7th Room | Global Audition">
+  <meta property="og:description" content="Are you ready to be found? We're looking for connection.">
   <meta property="og:type" content="website">
   <meta name="theme-color" content="#06060f">
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
@@ -16,6 +16,45 @@
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+
+  <!-- Cinematic Chatroom Intro -->
+  <div class="intro-overlay" id="introOverlay" role="status" aria-label="Loading">
+    <div class="intro-screen">
+      <div class="intro-scanlines" aria-hidden="true"></div>
+      <div class="intro-terminal">
+        <div class="intro-line" data-delay="300">
+          <span class="intro-prefix">&gt;</span> SYSTEM BOOT_
+        </div>
+        <div class="intro-line" data-delay="900">
+          <span class="intro-prefix">&gt;</span> initializing chatroom_v0.7.1...
+        </div>
+        <div class="intro-line" data-delay="1600">
+          <span class="intro-prefix">&gt;</span> scanning global frequencies
+        </div>
+        <div class="intro-line" data-delay="2400">
+          <span class="intro-prefix">&gt;</span> 7 slots detected
+        </div>
+        <div class="intro-line" data-delay="3200">
+          <span class="intro-prefix">&gt;</span> searching for signal...
+        </div>
+        <div class="intro-line intro-highlight" data-delay="4200">
+          <span class="intro-prefix">&gt;</span> connection established.
+        </div>
+        <div class="intro-line intro-welcome" data-delay="5200">
+          welcome to the 7th Room.
+        </div>
+      </div>
+      <div class="intro-sparkles" aria-hidden="true">
+        <span class="sparkle" style="--x: 15%; --y: 20%; --delay: 0.5s;"></span>
+        <span class="sparkle" style="--x: 80%; --y: 30%; --delay: 1.2s;"></span>
+        <span class="sparkle" style="--x: 45%; --y: 70%; --delay: 0.8s;"></span>
+        <span class="sparkle" style="--x: 70%; --y: 80%; --delay: 1.5s;"></span>
+        <span class="sparkle" style="--x: 25%; --y: 60%; --delay: 2s;"></span>
+        <span class="sparkle" style="--x: 90%; --y: 15%; --delay: 0.3s;"></span>
+      </div>
+      <button class="intro-skip" id="introSkip">skip</button>
+    </div>
+  </div>
 
   <!-- Navigation -->
   <nav class="navbar" id="navbar" role="navigation" aria-label="Main navigation">
@@ -43,7 +82,7 @@
     <div class="hero-content">
       <p class="hero-system-msg mono" aria-hidden="true">[SYSTEM] connection established...</p>
       <h1 class="hero-title glitch" data-text="Are you ready to be found?">Are you ready to be found?</h1>
-      <p class="hero-subtitle">We are looking for connection.</p>
+      <p class="hero-subtitle">We're looking for connection.</p>
       <div class="hero-slots mono" aria-label="3 of 7 audition slots remaining">
         <span class="slot-indicator">[</span>
         <span class="slot-count" id="slotCount">3</span>
@@ -67,8 +106,8 @@
       <div class="about-grid">
         <div class="about-content reveal">
           <h2 class="section-title gradient-text">This is not an audition.<br>This is a signal.</h2>
-          <p class="about-text">We are not building a typical group. We are building a world — a digital space where 7 girls from completely different countries find each other through a shared chatroom.</p>
-          <p class="about-text">Each one living her own reality — shaped by culture, environment, and personal battles. Through this shared space, they find connection, and most importantly, they find <em>each other</em>.</p>
+          <p class="about-text">We're not building a typical group. We're building a world, a digital space where 7 girls from completely different countries find each other through a shared chatroom.</p>
+          <p class="about-text">Each one living her own reality, shaped by culture, environment, and personal battles. Through this shared space they find connection. And most importantly, they find <em>each other</em>.</p>
           <p class="about-text accent-text">"Somewhere, someone is waiting to find you."</p>
           <div class="values-grid">
             <div class="value-item">
@@ -142,7 +181,7 @@
         <div class="category-card glass reveal">
           <div class="category-icon">🎨</div>
           <h3 class="category-title">Visual / Creative</h3>
-          <p class="category-desc">The world needs your eye. Design, film, style — creation in any form.</p>
+          <p class="category-desc">The world needs your eye. Design, film, style, creation in any form.</p>
           <span class="category-slot mono">[SLOT ?/7]</span>
         </div>
         <div class="category-card glass reveal">
@@ -170,7 +209,7 @@
           <h3 class="req-title mono">[WHO_CAN_APPLY]</h3>
           <ul class="req-list">
             <li>Female, born 2005 or later</li>
-            <li>Any nationality — this is global</li>
+            <li>Any nationality, open worldwide</li>
             <li>No prior training required</li>
             <li>Passion is the only prerequisite</li>
           </ul>
@@ -178,7 +217,7 @@
         <div class="req-card glass reveal">
           <h3 class="req-title mono">[WHAT_TO_PREPARE]</h3>
           <ul class="req-list">
-            <li>1 performance video (max 3 min) — singing, dancing, rapping, or creative content</li>
+            <li>1 performance video (max 3 min), singing, dancing, rapping, or creative content</li>
             <li>1 recent photo (unedited preferred)</li>
             <li>A brief self-introduction</li>
             <li>Upload your video to YouTube or Google Drive</li>
@@ -201,7 +240,7 @@
   <section class="section section-alt" id="process">
     <div class="container">
       <h2 class="section-title gradient-text reveal">The process.</h2>
-      <p class="section-subtitle reveal">From signal to connection. Here is how it works.</p>
+      <p class="section-subtitle reveal">From signal to connection. Here's how it works.</p>
       <div class="timeline">
         <div class="timeline-step active reveal">
           <div class="step-number">01</div>
@@ -218,7 +257,7 @@
           <div class="step-content">
             <h3 class="step-title">Review</h3>
             <p class="step-label mono">"We're watching"</p>
-            <p class="step-desc">Our team reviews every submission carefully. We are not looking for perfection — we are looking for <em>you</em>.</p>
+            <p class="step-desc">Our team reviews every submission carefully. We're not looking for perfection. We're looking for <em>you</em>.</p>
           </div>
           <div class="step-status mono">[PENDING]</div>
         </div>
@@ -339,7 +378,7 @@
               <div class="file-upload-label">
                 <span class="file-upload-icon">↑</span>
                 <span class="file-upload-text">Drop your photo here or click to browse</span>
-                <span class="file-upload-hint mono">JPG, PNG — unedited preferred</span>
+                <span class="file-upload-hint mono">JPG, PNG, unedited preferred</span>
               </div>
             </div>
             <span class="form-error" aria-live="polite"></span>
@@ -403,7 +442,7 @@
             Do I need training or experience?
           </summary>
           <div class="faq-answer">
-            <p>No. We are not looking for polished performers. We are looking for real people with genuine passion, personality, and something to say. Training comes later — authenticity comes first.</p>
+            <p>No. We're not looking for polished performers. We're looking for real people with genuine passion, personality, and something to say. Training comes later. Authenticity comes first.</p>
           </div>
         </details>
         <details class="faq-item glass reveal">
@@ -412,7 +451,7 @@
             Can I apply from any country?
           </summary>
           <div class="faq-answer">
-            <p>Yes. This is a global project. The 7th Room has no borders. We are looking for girls from all over the world — that is the entire point.</p>
+            <p>Yes. This is a global project. The 7th Room has no borders. We're looking for girls from all over the world. That's the whole point.</p>
           </div>
         </details>
         <details class="faq-item glass reveal">
@@ -421,7 +460,7 @@
             What should my video look like?
           </summary>
           <div class="faq-answer">
-            <p>Be yourself. Sing, dance, rap, create — whatever feels most like you. It does not need to be professionally filmed. A phone recording in your room is perfectly fine. We care about who you are, not production quality.</p>
+            <p>Be yourself. Sing, dance, rap, create. Whatever feels most like you. It doesn't need to be professionally filmed. A phone recording in your room is perfectly fine. We care about who you are, not production quality.</p>
           </div>
         </details>
         <details class="faq-item glass reveal">
@@ -430,7 +469,7 @@
             When will I hear back?
           </summary>
           <div class="faq-answer">
-            <p>We review every single application. If your signal resonates, we will contact you via email within 4-6 weeks of submission. Please check your inbox (and spam folder) regularly.</p>
+            <p>We review every single application. If your signal resonates, we'll contact you via email within 4-6 weeks. Please check your inbox and spam folder regularly.</p>
           </div>
         </details>
         <details class="faq-item glass reveal">
@@ -448,7 +487,7 @@
             What happens after I am selected?
           </summary>
           <div class="faq-answer">
-            <p>Selected applicants enter the next phase — a deeper conversation, creative evaluations, and eventually, entry into the 7th Room. We will guide you through every step.</p>
+            <p>Selected applicants enter the next phase. Deeper conversations, creative evaluations, and eventually, entry into the 7th Room. We'll guide you through every step.</p>
           </div>
         </details>
         <details class="faq-item glass reveal">
@@ -457,7 +496,7 @@
             Is there an age limit?
           </summary>
           <div class="faq-answer">
-            <p>You must be born in 2005 or later. If you are under 18, parental consent will be required during later stages of the process.</p>
+            <p>You must be born in 2005 or later. If you're under 18, parental consent will be required during later stages.</p>
           </div>
         </details>
         <details class="faq-item glass reveal">

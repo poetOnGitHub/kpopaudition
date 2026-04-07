@@ -491,8 +491,160 @@
     });
   }
 
-  // --- Initialize Everything ---
-  function init() {
+  // --- Chatroom Intro Sequence ---
+  function initIntro() {
+    var overlay = document.getElementById('introOverlay');
+    var skipBtn = document.getElementById('introSkip');
+    if (!overlay) { initMain(); return; }
+
+    // Skip intro for reduced motion preference
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      overlay.hidden = true;
+      initMain();
+      return;
+    }
+
+    document.body.classList.add('intro-active');
+    var lines = overlay.querySelectorAll('.intro-line');
+    var audioCtx = null;
+    var introComplete = false;
+
+    // Web Audio API sound generator
+    function createAudioContext() {
+      try {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      } catch (e) {
+        // Audio not available, continue silently
+      }
+    }
+
+    function playTone(freq, duration, volume, type) {
+      if (!audioCtx) return;
+      try {
+        var osc = audioCtx.createOscillator();
+        var gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.type = type || 'sine';
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(volume || 0.05, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      } catch (e) {}
+    }
+
+    // Chatroom-style sounds
+    function playBootSound() {
+      playTone(200, 0.15, 0.04, 'square');
+      setTimeout(function () { playTone(300, 0.1, 0.03, 'square'); }, 80);
+    }
+
+    function playTypeSound() {
+      var freq = 800 + Math.random() * 400;
+      playTone(freq, 0.03, 0.02, 'square');
+    }
+
+    function playConnectSound() {
+      playTone(523, 0.15, 0.06, 'sine');
+      setTimeout(function () { playTone(659, 0.15, 0.06, 'sine'); }, 120);
+      setTimeout(function () { playTone(784, 0.25, 0.06, 'sine'); }, 240);
+    }
+
+    function playNotificationSound() {
+      playTone(880, 0.08, 0.04, 'sine');
+      setTimeout(function () { playTone(1100, 0.12, 0.04, 'sine'); }, 100);
+    }
+
+    function playWelcomeChime() {
+      var notes = [523, 659, 784, 1047];
+      notes.forEach(function (note, i) {
+        setTimeout(function () {
+          playTone(note, 0.4, 0.05, 'sine');
+        }, i * 150);
+      });
+    }
+
+    // Run the intro sequence
+    function runIntro() {
+      createAudioContext();
+      playBootSound();
+
+      lines.forEach(function (line, index) {
+        var delay = parseInt(line.getAttribute('data-delay'), 10);
+        setTimeout(function () {
+          if (introComplete) return;
+          line.classList.add('visible');
+
+          // Play sounds per line
+          if (index < 5) {
+            // Typing sounds for regular lines
+            for (var i = 0; i < 3; i++) {
+              setTimeout(function () {
+                if (!introComplete) playTypeSound();
+              }, i * 60);
+            }
+          }
+          if (index === 3) {
+            playNotificationSound();
+          }
+          if (index === 5) {
+            playConnectSound();
+          }
+          if (index === 6) {
+            playWelcomeChime();
+          }
+        }, delay);
+      });
+
+      // Fade out intro after last line
+      setTimeout(function () {
+        if (!introComplete) finishIntro();
+      }, 6800);
+    }
+
+    function finishIntro() {
+      introComplete = true;
+      overlay.classList.add('fade-out');
+      document.body.classList.remove('intro-active');
+      setTimeout(function () {
+        overlay.hidden = true;
+      }, 800);
+      initMain();
+    }
+
+    // Skip button
+    skipBtn.addEventListener('click', finishIntro);
+
+    // Also skip on Escape
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && !introComplete) finishIntro();
+    });
+
+    // Start on first user interaction (needed for audio context)
+    var started = false;
+    function startOnInteraction() {
+      if (started) return;
+      started = true;
+      runIntro();
+    }
+
+    // Try to auto-start, fall back to click
+    if (document.hidden === false || document.hidden === undefined) {
+      runIntro();
+      started = true;
+    }
+
+    document.addEventListener('click', function () {
+      if (!started) startOnInteraction();
+      // Resume audio context if suspended
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }, { once: false });
+  }
+
+  function initMain() {
     initScrollReveal();
     initNavbar();
     initSmoothScroll();
@@ -502,9 +654,10 @@
     initLoreEffects();
   }
 
+  // --- Initialize ---
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
+    document.addEventListener('DOMContentLoaded', initIntro);
   } else {
-    init();
+    initIntro();
   }
 })();

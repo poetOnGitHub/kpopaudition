@@ -89,11 +89,13 @@ ul {
 
 /* --- Utility Classes --- */
 .glass {
+  position: relative;
   background: var(--glass-bg);
   backdrop-filter: blur(var(--glass-blur));
   -webkit-backdrop-filter: blur(var(--glass-blur));
   border: 1px solid var(--glass-border);
   border-radius: var(--radius);
+  overflow: hidden;
 }
 
 .glass:hover {
@@ -449,6 +451,8 @@ ul {
 
 .section-alt {
   background: var(--bg-secondary);
+  position: relative;
+  overflow: hidden;
 }
 
 .section-title {
@@ -1400,4 +1404,311 @@ select.form-input option {
 ::selection {
   background: rgba(0, 212, 255, 0.3);
   color: var(--text-primary);
+}
+
+/* ============================================
+   Cinematic Chatroom Intro
+   ============================================ */
+.intro-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: #020208;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.8s ease, visibility 0.8s ease;
+}
+
+.intro-overlay.fade-out {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.intro-overlay[hidden] {
+  display: none;
+}
+
+.intro-screen {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.intro-scanlines {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 1px,
+    rgba(255, 255, 255, 0.008) 1px,
+    rgba(255, 255, 255, 0.008) 2px
+  );
+  pointer-events: none;
+  z-index: 2;
+}
+
+.intro-terminal {
+  position: relative;
+  z-index: 3;
+  max-width: 500px;
+  padding: 0 24px;
+}
+
+.intro-line {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  line-height: 2.2;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+.intro-line.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.intro-prefix {
+  color: var(--accent-cyan);
+  margin-right: 4px;
+}
+
+.intro-highlight {
+  color: var(--accent-cyan);
+}
+
+.intro-welcome {
+  font-size: 1.4rem;
+  font-weight: 300;
+  font-family: var(--font-sans);
+  color: var(--text-primary);
+  margin-top: 20px;
+  letter-spacing: 2px;
+  background: linear-gradient(135deg, var(--accent-cyan), var(--accent-pink));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.intro-skip {
+  position: absolute;
+  bottom: 32px;
+  right: 32px;
+  z-index: 5;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 6px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  transition: all 0.3s;
+}
+
+.intro-skip:hover {
+  color: var(--text-primary);
+  border-color: var(--accent-cyan);
+}
+
+/* Sparkles */
+.intro-sparkles {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.sparkle {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  width: 3px;
+  height: 3px;
+  background: var(--accent-cyan);
+  border-radius: 50%;
+  box-shadow: 0 0 6px var(--accent-cyan), 0 0 12px var(--accent-purple);
+  animation: sparkle-pulse 2s ease-in-out infinite var(--delay);
+}
+
+@keyframes sparkle-pulse {
+  0%, 100% { opacity: 0; transform: scale(0.5); }
+  50% { opacity: 0.8; transform: scale(1.2); }
+}
+
+/* Body locked during intro */
+body.intro-active {
+  overflow: hidden;
+}
+
+/* ============================================
+   K-Pop Girl Group Aesthetic Enhancements
+   ============================================ */
+
+/* Star decorations on section headings */
+.section-title::before {
+  content: '✧';
+  margin-right: 12px;
+  font-size: 0.6em;
+  opacity: 0.6;
+}
+
+/* Dreamy glow on hero */
+.hero::before {
+  content: '';
+  position: absolute;
+  top: -20%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(236, 72, 153, 0.08) 0%, transparent 70%);
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Softer gradient accent on cards */
+.category-card:nth-child(even)::after {
+  background: var(--gradient-warm);
+}
+
+/* Star burst on category icons */
+.category-icon {
+  position: relative;
+}
+
+.category-icon::after {
+  content: '✦';
+  position: absolute;
+  top: -4px;
+  right: -8px;
+  font-size: 0.5rem;
+  color: var(--accent-pink);
+  opacity: 0;
+  transition: opacity var(--transition);
+}
+
+.category-card:hover .category-icon::after {
+  opacity: 0.7;
+}
+
+/* Shimmer line on glass panels */
+.glass::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.02),
+    transparent
+  );
+  transition: none;
+  pointer-events: none;
+}
+
+.glass:hover::before {
+  animation: shimmer 0.8s ease forwards;
+}
+
+@keyframes shimmer {
+  from { left: -100%; }
+  to { left: 100%; }
+}
+
+/* Warm pink glow on submit button */
+.btn-submit {
+  background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple), var(--accent-pink));
+  background-size: 200% 200%;
+  animation: gradient-shift 4s ease infinite;
+}
+
+@keyframes gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Floating star decorations in hero */
+.hero-content::before,
+.hero-content::after {
+  font-size: 0.8rem;
+  opacity: 0.15;
+  position: absolute;
+  pointer-events: none;
+  animation: float-star 6s ease-in-out infinite;
+}
+
+.hero-content::before {
+  content: '✧';
+  top: 10%;
+  left: 15%;
+  color: var(--accent-pink);
+  animation-delay: 0s;
+}
+
+.hero-content::after {
+  content: '✦';
+  bottom: 20%;
+  right: 15%;
+  color: var(--accent-cyan);
+  animation-delay: 3s;
+}
+
+@keyframes float-star {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-15px) rotate(180deg); }
+}
+
+/* Dreamy section divider */
+.section-alt::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--accent-pink),
+    var(--accent-cyan),
+    var(--accent-purple),
+    transparent
+  );
+  opacity: 0.3;
+}
+
+/* Enhanced chatroom window for girl group feel */
+.chatroom-window {
+  box-shadow: 0 0 40px rgba(236, 72, 153, 0.05), 0 0 80px rgba(139, 92, 246, 0.03);
+}
+
+/* Footer with soft glow */
+.footer::before {
+  content: '';
+  position: absolute;
+  top: -60px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 400px;
+  height: 120px;
+  background: radial-gradient(ellipse, rgba(139, 92, 246, 0.06) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.footer {
+  position: relative;
 }
