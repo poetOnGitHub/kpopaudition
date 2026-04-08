@@ -191,16 +191,20 @@
     var navLinks = document.getElementById('navLinks');
     var links = navLinks.querySelectorAll('a');
 
-    // Scroll effect
-    var lastScroll = 0;
+    // Scroll effect (rAF-guarded)
+    var navTicking = false;
     window.addEventListener('scroll', function () {
-      var current = window.scrollY;
-      if (current > 50) {
-        navbar.classList.add('scrolled');
-      } else {
-        navbar.classList.remove('scrolled');
+      if (!navTicking) {
+        requestAnimationFrame(function () {
+          if (window.scrollY > 50) {
+            navbar.classList.add('scrolled');
+          } else {
+            navbar.classList.remove('scrolled');
+          }
+          navTicking = false;
+        });
+        navTicking = true;
       }
-      lastScroll = current;
     }, { passive: true });
 
     // Mobile toggle
@@ -631,47 +635,62 @@
     });
   }
 
-  // --- Lore Effects ---
+  // --- Lore Effects (pause when hero off-screen) ---
   function initLoreEffects() {
-    // Update timestamp
     var timestampEl = document.getElementById('heroTimestamp');
-    if (timestampEl) {
-      function updateTimestamp() {
-        var now = new Date();
-        var y = now.getFullYear();
-        var m = String(now.getMonth() + 1).padStart(2, '0');
-        var d = String(now.getDate()).padStart(2, '0');
-        var h = String(now.getHours()).padStart(2, '0');
-        var min = String(now.getMinutes()).padStart(2, '0');
-        var s = String(now.getSeconds()).padStart(2, '0');
-        timestampEl.textContent = y + '.' + m + '.' + d + ' ' + h + ':' + min + ':' + s;
-      }
-      updateTimestamp();
-      setInterval(updateTimestamp, 1000);
-    }
-
-    // Subtle coordinate drift
     var coordsEl = document.getElementById('heroCoords');
-    if (coordsEl) {
-      setInterval(function () {
-        var lat = (37.5665 + (Math.random() - 0.5) * 0.001).toFixed(4);
-        var lng = (126.9780 + (Math.random() - 0.5) * 0.001).toFixed(4);
-        coordsEl.textContent = lat + '\u00B0N, ' + lng + '\u00B0E';
-      }, 5000);
+    var systemMsgs = document.querySelectorAll('.hero-system-msg, .footer-lore');
+    var heroEl = document.getElementById('hero');
+    var loreIntervals = [];
+    var loreRunning = false;
+
+    function updateTimestamp() {
+      var now = new Date();
+      var y = now.getFullYear();
+      var m = String(now.getMonth() + 1).padStart(2, '0');
+      var d = String(now.getDate()).padStart(2, '0');
+      var h = String(now.getHours()).padStart(2, '0');
+      var min = String(now.getMinutes()).padStart(2, '0');
+      var s = String(now.getSeconds()).padStart(2, '0');
+      timestampEl.textContent = y + '.' + m + '.' + d + ' ' + h + ':' + min + ':' + s;
     }
 
-    // Random system message flickers
-    var systemMsgs = document.querySelectorAll('.hero-system-msg, .footer-lore');
-    systemMsgs.forEach(function (msg) {
-      setInterval(function () {
-        if (Math.random() > 0.7) {
-          msg.style.opacity = '0.2';
-          setTimeout(function () {
-            msg.style.opacity = '';
-          }, 150);
-        }
-      }, 3000);
-    });
+    function startLore() {
+      if (loreRunning) return;
+      loreRunning = true;
+      if (timestampEl) {
+        updateTimestamp();
+        loreIntervals.push(setInterval(updateTimestamp, 1000));
+      }
+      if (coordsEl) {
+        loreIntervals.push(setInterval(function () {
+          var lat = (37.5665 + (Math.random() - 0.5) * 0.001).toFixed(4);
+          var lng = (126.9780 + (Math.random() - 0.5) * 0.001).toFixed(4);
+          coordsEl.textContent = lat + '\u00B0N, ' + lng + '\u00B0E';
+        }, 5000));
+      }
+      systemMsgs.forEach(function (msg) {
+        loreIntervals.push(setInterval(function () {
+          if (Math.random() > 0.7) {
+            msg.style.opacity = '0.2';
+            setTimeout(function () { msg.style.opacity = ''; }, 150);
+          }
+        }, 3000));
+      });
+    }
+
+    function stopLore() {
+      loreRunning = false;
+      loreIntervals.forEach(function (id) { clearInterval(id); });
+      loreIntervals = [];
+    }
+
+    if (heroEl) {
+      var loreObserver = new IntersectionObserver(function (entries) {
+        if (entries[0].isIntersecting) { startLore(); } else { stopLore(); }
+      });
+      loreObserver.observe(heroEl);
+    }
   }
 
   // --- Chatroom Intro Sequence ---
@@ -1218,7 +1237,7 @@
         if (i < text.length) {
           el.textContent += text.charAt(i);
           i++;
-          scrollChat();
+          if (i % 5 === 0 || i === text.length) scrollChat();
           setTimeout(tick, speed + (Math.random() * speed * 0.5));
         } else if (callback) { callback(); }
       }
