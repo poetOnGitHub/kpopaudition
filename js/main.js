@@ -636,8 +636,6 @@
     // Escape skips
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape' && !introComplete) finishIntro();
-      // Any key starts the sequence if not started
-      if (!sequenceStarted && !introComplete) startSequence();
     });
   }
 

@@ -208,6 +208,8 @@ a:hover { color: var(--hot-pink); }
 .intro-overlay.fade-out { opacity: 0; visibility: hidden; }
 .intro-overlay[hidden] { display: none; }
 
+body.intro-active { overflow: hidden; }
+
 .intro-screen {
   position: relative;
   width: 100%;
