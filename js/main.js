@@ -216,21 +216,33 @@
       }
     }
 
+    var animating = false;
+    var rafId = null;
+
     function animate() {
+      if (!animating) return;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       particles.forEach(function (p) {
         p.update();
         p.draw();
       });
       drawConnections();
-      requestAnimationFrame(animate);
+      rafId = requestAnimationFrame(animate);
     }
 
-    // Only animate if user doesn't prefer reduced motion
+    // Only animate when hero is visible
     if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      animate();
+      var heroEl = document.getElementById('hero');
+      var particleObserver = new IntersectionObserver(function (entries) {
+        if (entries[0].isIntersecting) {
+          if (!animating) { animating = true; animate(); }
+        } else {
+          animating = false;
+          if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+        }
+      });
+      if (heroEl) particleObserver.observe(heroEl);
     } else {
-      // Static render
       particles.forEach(function (p) { p.draw(); });
       drawConnections();
     }
@@ -240,6 +252,12 @@
   function initFormValidation() {
     var form = document.getElementById('applicationForm');
     if (!form) return;
+
+    // Set DOB max to today dynamically
+    var dobInput = document.getElementById('dob');
+    if (dobInput) {
+      dobInput.max = new Date().toISOString().split('T')[0];
+    }
 
     var charCount = document.getElementById('charCount');
     var selfIntro = document.getElementById('selfIntro');
@@ -421,6 +439,7 @@
       modal.hidden = false;
       requestAnimationFrame(function () {
         modal.classList.add('active');
+        if (modalClose) modalClose.focus();
       });
       document.body.style.overflow = 'hidden';
     }
@@ -431,6 +450,7 @@
         modal.hidden = true;
       }, 400);
       document.body.style.overflow = '';
+      if (submitBtn) submitBtn.focus();
     }
 
     if (modalClose) {
@@ -1042,7 +1062,13 @@
       tick();
     }
 
+    var MAX_MESSAGES = 50;
+
     function addMessage(text, cssClass, typingSpeed, callback) {
+      // Cap DOM elements
+      while (body.children.length >= MAX_MESSAGES) {
+        body.removeChild(body.firstChild);
+      }
       var p = document.createElement('p');
       p.className = 'chat-msg ' + cssClass;
       body.appendChild(p);

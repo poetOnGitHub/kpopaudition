@@ -13,12 +13,13 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=2">
+  <link rel="stylesheet" href="css/style.css?v=3">
+  <noscript><style>.reveal { opacity: 1 !important; transform: none !important; }</style></noscript>
 </head>
 <body>
 
   <!-- Cinematic Chatroom Intro -->
-  <div class="intro-overlay" id="introOverlay" role="status" aria-label="Loading">
+  <div class="intro-overlay" id="introOverlay" role="dialog" aria-label="Welcome to 7th Room">
     <div class="intro-screen">
       <div class="intro-scanlines" aria-hidden="true"></div>
       <div class="intro-terminal">
@@ -53,7 +54,7 @@
         <span class="sparkle" style="--x: 90%; --y: 15%; --delay: 0.3s;"></span>
       </div>
       <div class="intro-enter" id="introEnter">
-        <p class="intro-enter-text">click anywhere to enter</p>
+        <p class="intro-enter-text">click or press Enter to begin</p>
         <span class="intro-enter-pulse"></span>
       </div>
       <button class="intro-skip" id="introSkip">skip</button>
@@ -69,12 +70,12 @@
       <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation menu" aria-expanded="false">
         <span class="hamburger"></span>
       </button>
-      <ul class="nav-links" id="navLinks" role="menubar">
-        <li role="none"><a href="#about" role="menuitem">About</a></li>
-        <li role="none"><a href="#audition" role="menuitem">Audition</a></li>
-        <li role="none"><a href="#process" role="menuitem">Process</a></li>
-        <li role="none"><a href="#apply" role="menuitem">Apply</a></li>
-        <li role="none"><a href="#faq" role="menuitem">FAQ</a></li>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="#about">About</a></li>
+        <li><a href="#audition">Audition</a></li>
+        <li><a href="#process">Process</a></li>
+        <li><a href="#apply">Apply</a></li>
+        <li><a href="#faq">FAQ</a></li>
       </ul>
     </div>
   </nav>
@@ -163,7 +164,7 @@
               <!-- Messages typed in by JS -->
             </div>
             <div class="chatroom-input-bar">
-              <input type="text" id="chatroomInput" class="chatroom-input mono" placeholder="type a message..." autocomplete="off" maxlength="120">
+              <input type="text" id="chatroomInput" class="chatroom-input mono" placeholder="type a message..." autocomplete="off" maxlength="120" enterkeyhint="send">
               <button id="chatroomSend" class="chatroom-send mono">Send</button>
             </div>
           </div>
@@ -325,7 +326,7 @@
           </div>
           <div class="form-group">
             <label for="dob" class="form-label">Date of Birth <span class="required">*</span></label>
-            <input type="date" id="dob" name="dateOfBirth" class="form-input" required max="2026-04-07">
+            <input type="date" id="dob" name="dateOfBirth" class="form-input" required min="2005-01-01">
             <span class="form-error" aria-live="polite"></span>
           </div>
           <div class="form-group">
@@ -429,7 +430,6 @@
           <div class="form-group full-width">
             <label class="checkbox-label">
               <input type="checkbox" id="agreement" name="agreement" required>
-              <span class="checkbox-custom"></span>
               <span class="checkbox-text">I agree to the collection and processing of my personal data for the purpose of this audition. I confirm that all submitted information is accurate. <span class="required">*</span></span>
             </label>
             <span class="form-error" aria-live="polite"></span>
@@ -549,10 +549,10 @@
           <p class="footer-tagline mono">"Not everyone will understand this."</p>
         </div>
         <div class="footer-links">
-          <a href="#" class="social-link" aria-label="Instagram" target="_blank" rel="noopener">Instagram</a>
-          <a href="#" class="social-link" aria-label="TikTok" target="_blank" rel="noopener">TikTok</a>
-          <a href="#" class="social-link" aria-label="YouTube" target="_blank" rel="noopener">YouTube</a>
-          <a href="#" class="social-link" aria-label="Twitter" target="_blank" rel="noopener">X / Twitter</a>
+          <span class="social-link">Instagram</span>
+          <span class="social-link">TikTok</span>
+          <span class="social-link">YouTube</span>
+          <span class="social-link">X / Twitter</span>
         </div>
         <p class="footer-copy">&copy; 2026 7th Room. All rights reserved.</p>
         <p class="footer-lore mono" aria-hidden="true">connection::established // chatroom_v0.7.1 // signal_active</p>
@@ -561,6 +561,6 @@
   </footer>
   <!-- connection established // chatroom v0.7.1 // not everyone will understand this -->
 
-  <script src="js/main.js?v=2"></script>
+  <script src="js/main.js?v=3"></script>
 </body>
 </html>
