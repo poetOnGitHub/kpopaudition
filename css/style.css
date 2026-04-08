@@ -43,6 +43,8 @@ body {
   line-height: 1.7;
   overflow-x: hidden;
   min-height: 100vh;
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
   cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Cline x1='12' y1='2' x2='12' y2='22' stroke='%23ff69b4' stroke-width='1.5'/%3E%3Cline x1='2' y1='12' x2='22' y2='12' stroke='%23ff69b4' stroke-width='1.5'/%3E%3Ccircle cx='12' cy='12' r='3' fill='none' stroke='%23ff69b4' stroke-width='1.5'/%3E%3Ccircle cx='12' cy='12' r='1' fill='%23ff69b4'/%3E%3C/svg%3E") 12 12, crosshair;
 }
 
@@ -317,7 +319,8 @@ body.intro-active { overflow: hidden; }
   left: 0;
   right: 0;
   z-index: 1000;
-  height: var(--nav-height);
+  height: calc(var(--nav-height) + env(safe-area-inset-top));
+  padding-top: env(safe-area-inset-top);
   background: linear-gradient(180deg,
     rgba(255, 255, 255, 0.92),
     rgba(240, 232, 255, 0.88));
@@ -1365,7 +1368,7 @@ a, button, .nav-toggle, .faq-question, .category-card,
 
 /* ===================== FOOTER ===================== */
 .footer {
-  padding: 56px 0 36px;
+  padding: 56px 0 calc(36px + env(safe-area-inset-bottom));
   background:
     radial-gradient(ellipse at 30% 50%, rgba(255, 105, 180, 0.06) 0%, transparent 50%),
     radial-gradient(ellipse at 70% 50%, rgba(153, 102, 255, 0.06) 0%, transparent 50%),
@@ -1440,6 +1443,19 @@ a, button, .nav-toggle, .faq-question, .category-card,
 }
 
 /* ===================== WORD-BY-WORD TEXT REVEAL ===================== */
+/* Move gradient from parent h2 to each span so opacity animation works */
+.text-reveal-ready.gradient-text {
+  background: none !important;
+  -webkit-text-fill-color: initial !important;
+}
+
+.text-reveal-ready.gradient-text .word-reveal {
+  background: linear-gradient(135deg, var(--hot-pink), var(--purple), var(--deep-blue));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
 .text-reveal-ready .word-reveal {
   display: inline-block;
   opacity: 0;
@@ -1650,6 +1666,18 @@ a, button, .nav-toggle, .faq-question, .category-card,
   .section-title { font-size: 1.5rem; }
   .categories-grid { grid-template-columns: 1fr; }
   .requirements-grid { grid-template-columns: 1fr; }
+}
+
+/* Disable custom cursors on touch devices */
+@media (pointer: coarse) {
+  body,
+  a, button, .nav-toggle, .faq-question, .category-card,
+  .chatroom-send, .btn-glossy, .btn-submit, .btn-modal-close,
+  .intro-skip, .social-link, select, .file-upload {
+    cursor: auto !important;
+  }
+
+  .sparkle-trail { display: none !important; }
 }
 
 @media (prefers-reduced-motion: reduce) {
