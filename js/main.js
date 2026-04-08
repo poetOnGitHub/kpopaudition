@@ -158,7 +158,7 @@
       this.speedX = (Math.random() - 0.5) * 0.3;
       this.speedY = (Math.random() - 0.5) * 0.3;
       this.opacity = Math.random() * 0.5 + 0.1;
-      this.color = Math.random() > 0.7 ? '139, 92, 246' : '0, 212, 255';
+      this.color = Math.random() > 0.6 ? '255, 105, 180' : Math.random() > 0.5 ? '153, 102, 255' : '0, 191, 255';
     }
 
     Particle.prototype.update = function () {
@@ -208,7 +208,7 @@
             ctx.beginPath();
             ctx.moveTo(particles[i].x, particles[i].y);
             ctx.lineTo(particles[j].x, particles[j].y);
-            ctx.strokeStyle = 'rgba(0, 212, 255, ' + opacity + ')';
+            ctx.strokeStyle = 'rgba(255, 105, 180, ' + opacity + ')';
             ctx.lineWidth = 0.5;
             ctx.stroke();
           }
