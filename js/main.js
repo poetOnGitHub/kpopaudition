@@ -5,25 +5,128 @@
 (function () {
   'use strict';
 
-  // --- Scroll Reveal ---
+  // --- Scroll Reveal (Staggered) ---
   function initScrollReveal() {
     var revealElements = document.querySelectorAll('.reveal');
     if (!revealElements.length) return;
 
     var observer = new IntersectionObserver(function (entries) {
+      // Group siblings that enter at the same time for staggering
+      var batch = [];
       entries.forEach(function (entry) {
         if (entry.isIntersecting) {
-          entry.target.classList.add('visible');
+          batch.push(entry.target);
           observer.unobserve(entry.target);
         }
       });
+      batch.forEach(function (el, i) {
+        el.style.transitionDelay = (i * 120) + 'ms';
+        el.classList.add('visible');
+        // Clean up delay after animation
+        setTimeout(function () { el.style.transitionDelay = ''; }, 1000 + i * 120);
+      });
     }, {
-      threshold: 0.1,
-      rootMargin: '0px 0px -50px 0px'
+      threshold: 0.08,
+      rootMargin: '0px 0px -60px 0px'
     });
 
     revealElements.forEach(function (el) {
       observer.observe(el);
+    });
+  }
+
+  // --- Scroll-Linked Hero Effects ---
+  function initScrollHero() {
+    var heroContent = document.querySelector('.hero-content');
+    var hero = document.getElementById('hero');
+    if (!heroContent || !hero) return;
+
+    var ticking = false;
+    window.addEventListener('scroll', function () {
+      if (!ticking) {
+        requestAnimationFrame(function () {
+          var scrollY = window.scrollY;
+          var heroH = hero.offsetHeight;
+          if (scrollY < heroH) {
+            var progress = scrollY / heroH;
+            var opacity = 1 - progress * 1.5;
+            var scale = 1 - progress * 0.15;
+            var translateY = scrollY * 0.4;
+            heroContent.style.opacity = Math.max(0, opacity);
+            heroContent.style.transform = 'translateY(' + translateY + 'px) scale(' + Math.max(0.85, scale) + ')';
+          }
+          ticking = false;
+        });
+        ticking = true;
+      }
+    }, { passive: true });
+  }
+
+  // --- Scroll Progress Bar ---
+  function initScrollProgress() {
+    var bar = document.createElement('div');
+    bar.className = 'scroll-progress';
+    document.body.appendChild(bar);
+
+    var ticking = false;
+    window.addEventListener('scroll', function () {
+      if (!ticking) {
+        requestAnimationFrame(function () {
+          var scrollTop = window.scrollY;
+          var docHeight = document.documentElement.scrollHeight - window.innerHeight;
+          var progress = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
+          bar.style.width = progress + '%';
+          ticking = false;
+        });
+        ticking = true;
+      }
+    }, { passive: true });
+  }
+
+  // --- Parallax Depth on Sections ---
+  function initParallax() {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    var parallaxEls = document.querySelectorAll('.section-title, .chatroom-window, .step-number');
+    if (!parallaxEls.length) return;
+
+    var ticking = false;
+    window.addEventListener('scroll', function () {
+      if (!ticking) {
+        requestAnimationFrame(function () {
+          parallaxEls.forEach(function (el) {
+            var rect = el.getBoundingClientRect();
+            var windowH = window.innerHeight;
+            if (rect.top < windowH && rect.bottom > 0) {
+              var center = rect.top + rect.height / 2;
+              var offset = (center - windowH / 2) / windowH;
+              el.style.transform = 'translateY(' + (offset * -20) + 'px)';
+            }
+          });
+          ticking = false;
+        });
+        ticking = true;
+      }
+    }, { passive: true });
+  }
+
+  // --- Magnetic Buttons ---
+  function initMagneticButtons() {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    var buttons = document.querySelectorAll('.btn-glossy, .btn-submit, .nav-links a');
+    buttons.forEach(function (btn) {
+      btn.addEventListener('mousemove', function (e) {
+        var rect = btn.getBoundingClientRect();
+        var x = e.clientX - rect.left - rect.width / 2;
+        var y = e.clientY - rect.top - rect.height / 2;
+        btn.style.transform = 'translate(' + (x * 0.15) + 'px, ' + (y * 0.15) + 'px)';
+      });
+      btn.addEventListener('mouseleave', function () {
+        btn.style.transform = '';
+        btn.style.transition = 'transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+        setTimeout(function () { btn.style.transition = ''; }, 400);
+      });
     });
   }
 
@@ -1315,6 +1418,10 @@
 
   function initMain() {
     initScrollReveal();
+    initScrollHero();
+    initScrollProgress();
+    initParallax();
+    initMagneticButtons();
     initNavbar();
     initSmoothScroll();
     initGlitchEffect();
