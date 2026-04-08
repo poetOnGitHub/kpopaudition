@@ -519,13 +519,15 @@
       }
       try {
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        audioCtx.resume();
       } catch (e) {
         // Audio not supported
       }
     }
 
     function playTone(freq, duration, volume, type) {
-      if (!audioCtx || audioCtx.state !== 'running') return;
+      if (!audioCtx) return;
+      if (audioCtx.state === 'suspended') audioCtx.resume();
       try {
         var osc = audioCtx.createOscillator();
         var gain = audioCtx.createGain();
@@ -541,28 +543,28 @@
     }
 
     function playBootSound() {
-      playTone(200, 0.15, 0.04, 'square');
-      setTimeout(function () { playTone(300, 0.1, 0.03, 'square'); }, 80);
+      playTone(200, 0.2, 0.15, 'square');
+      setTimeout(function () { playTone(300, 0.15, 0.12, 'square'); }, 100);
     }
 
     function playTypeSound() {
-      playTone(800 + Math.random() * 400, 0.03, 0.02, 'square');
+      playTone(800 + Math.random() * 400, 0.05, 0.08, 'square');
     }
 
     function playConnectSound() {
-      playTone(523, 0.15, 0.06, 'sine');
-      setTimeout(function () { playTone(659, 0.15, 0.06, 'sine'); }, 120);
-      setTimeout(function () { playTone(784, 0.25, 0.06, 'sine'); }, 240);
+      playTone(523, 0.2, 0.15, 'sine');
+      setTimeout(function () { playTone(659, 0.2, 0.15, 'sine'); }, 150);
+      setTimeout(function () { playTone(784, 0.3, 0.15, 'sine'); }, 300);
     }
 
     function playNotificationSound() {
-      playTone(880, 0.08, 0.04, 'sine');
-      setTimeout(function () { playTone(1100, 0.12, 0.04, 'sine'); }, 100);
+      playTone(880, 0.12, 0.12, 'sine');
+      setTimeout(function () { playTone(1100, 0.15, 0.12, 'sine'); }, 120);
     }
 
     function playWelcomeChime() {
       [523, 659, 784, 1047].forEach(function (note, i) {
-        setTimeout(function () { playTone(note, 0.4, 0.05, 'sine'); }, i * 150);
+        setTimeout(function () { playTone(note, 0.5, 0.12, 'sine'); }, i * 180);
       });
     }
 
