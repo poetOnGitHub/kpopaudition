@@ -511,23 +511,8 @@
     var introComplete = false;
     var sequenceStarted = false;
 
-    // Create AudioContext only after user gesture
-    function ensureAudioContext() {
-      if (audioCtx) {
-        if (audioCtx.state === 'suspended') audioCtx.resume();
-        return;
-      }
-      try {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        audioCtx.resume();
-      } catch (e) {
-        // Audio not supported
-      }
-    }
-
     function playTone(freq, duration, volume, type) {
-      if (!audioCtx) return;
-      if (audioCtx.state === 'suspended') audioCtx.resume();
+      if (!audioCtx || audioCtx.state !== 'running') return;
       try {
         var osc = audioCtx.createOscillator();
         var gain = audioCtx.createGain();
@@ -535,11 +520,13 @@
         gain.connect(audioCtx.destination);
         osc.type = type || 'sine';
         osc.frequency.value = freq;
-        gain.gain.setValueAtTime(volume || 0.05, audioCtx.currentTime);
+        gain.gain.setValueAtTime(volume || 0.1, audioCtx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
         osc.start();
         osc.stop(audioCtx.currentTime + duration);
-      } catch (e) {}
+      } catch (e) {
+        console.warn('playTone error:', e);
+      }
     }
 
     function playBootSound() {
@@ -568,16 +555,8 @@
       });
     }
 
-    // Start the boot sequence (called after user click)
-    function startSequence() {
-      if (sequenceStarted) return;
-      sequenceStarted = true;
-
-      // Hide the "click to enter" prompt
-      if (enterPrompt) enterPrompt.classList.add('hidden');
-
-      // Create audio context now (inside user gesture)
-      ensureAudioContext();
+    // Run the boot line sequence + sounds
+    function runBootSequence() {
       playBootSound();
 
       lines.forEach(function (line, index) {
@@ -601,10 +580,34 @@
         }, delay);
       });
 
-      // Auto-finish after last line
       setTimeout(function () {
         if (!introComplete) finishIntro();
       }, 6800);
+    }
+
+    // Start the boot sequence (called after user click)
+    function startSequence() {
+      if (sequenceStarted) return;
+      sequenceStarted = true;
+
+      // Hide the "click to enter" prompt
+      if (enterPrompt) enterPrompt.classList.add('hidden');
+
+      // Create AudioContext inside user gesture, wait for it to be running
+      try {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      } catch (e) {
+        // no audio support, run visuals only
+        runBootSequence();
+        return;
+      }
+
+      // resume() returns a promise - wait for context to be running before playing sounds
+      audioCtx.resume().then(function () {
+        runBootSequence();
+      }).catch(function () {
+        runBootSequence();
+      });
     }
 
     function finishIntro() {
