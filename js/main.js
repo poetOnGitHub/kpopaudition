@@ -639,7 +639,7 @@
     });
   }
 
-  // --- Interactive Chatroom ---
+  // --- Interactive Chatroom (Eliza-style Engine) ---
   function initChatroom() {
     var body = document.getElementById('chatroomBody');
     var input = document.getElementById('chatroomInput');
@@ -667,255 +667,367 @@
     var isTyping = false;
     var messageQueue = [];
     var chatStarted = false;
-    var lastUserMsg = '';
-    var conversationIndex = 0;
+    var userMsgCount = 0;
 
-    // Conversation threads that play out naturally
+    // --- Memory & State ---
+    var memory = {
+      topics: [],          // what user has talked about
+      mood: 'neutral',     // neutral, excited, nervous, vulnerable, hype
+      userName: null,       // if they share their name
+      userCountry: null,    // if they share location
+      userCategory: null,   // vocal/dance/rap etc
+      messagesReceived: 0,
+      lastTopic: null
+    };
+
+    // --- Eliza Reflection Map ---
+    // Flips pronouns/perspective so we can echo back naturally
+    var reflections = {
+      'i am': 'you are', 'i was': 'you were', 'i have': 'you have',
+      'i will': 'you will', 'i would': 'you would', 'i can': 'you can',
+      'my': 'your', 'me': 'you', 'myself': 'yourself',
+      'am': 'are', 'im': 'youre'
+    };
+
+    function reflect(text) {
+      var words = text.toLowerCase().split(/\s+/);
+      return words.map(function (w) { return reflections[w] || w; }).join(' ');
+    }
+
+    // --- Template Engine ---
+    // {0} = reflected input, {name} = user handle, {city} = user city, {topic} = extracted topic
+    function fillTemplate(tpl, data) {
+      return tpl.replace(/\{(\w+)\}/g, function (_, key) {
+        return data[key] !== undefined ? data[key] : '';
+      });
+    }
+
+    // --- Eliza Pattern Rules ---
+    // Each rule: regex pattern, system response templates, user reaction templates
+    // {input} = reflected user input, {extract} = captured group from regex
+    var elizaRules = [
+      {
+        regex: /\b(?:my name is|im called|call me|i am) (\w+)/i,
+        onMatch: function (m) { memory.userName = m[1]; },
+        system: ['[SYSTEM] Identity registered: {extract}.'],
+        users: [
+          'hi {extract}!! welcome to the room',
+          'nice to meet you {extract}!',
+          '{extract}!! i love that name',
+          'welcome {extract}. you belong here'
+        ]
+      },
+      {
+        regex: /\b(?:i sing|i.?m a singer|vocal|i love singing|my voice)\b/i,
+        onMatch: function () { memory.userCategory = 'vocal'; memory.topics.push('singing'); },
+        system: ['[SYSTEM] Vocal frequency detected. Resonance: strong.'],
+        users: [
+          'a vocalist! what genre do you usually go for?',
+          'omg same. singing is everything to me',
+          'i would love to hear you sing tbh',
+          'vocal line is going to be insane in this group'
+        ]
+      },
+      {
+        regex: /\b(?:i dance|dancer|i love dancing|choreo|i.?m a dancer)\b/i,
+        onMatch: function () { memory.userCategory = 'dance'; memory.topics.push('dancing'); },
+        system: ['[SYSTEM] Movement signature captured.'],
+        users: [
+          'dancer!! what style is your specialty?',
+          'i can feel the energy already',
+          'dance is the purest form of expression imo',
+          'the dance line in this group is going to go OFF'
+        ]
+      },
+      {
+        regex: /\b(?:i rap|rapper|bars|i write lyrics|flow)\b/i,
+        onMatch: function () { memory.userCategory = 'rap'; memory.topics.push('rapping'); },
+        system: ['[SYSTEM] Lyrical signal analyzed. Pattern: unique.'],
+        users: [
+          'a rapper?? ok we NEED you',
+          'rap is so underrated in kpop. show them',
+          'spit some bars right now i dare you lol',
+          'wordsmith energy. i respect that'
+        ]
+      },
+      {
+        regex: /\b(?:nervous|scared|terrified|anxious|afraid|worried|shaking)\b/i,
+        onMatch: function () { memory.mood = 'nervous'; memory.topics.push('nervousness'); },
+        system: ['[SYSTEM] Emotional resonance detected. You are not alone in this room.'],
+        users: [
+          'honestly? same. but thats how you know it matters',
+          'being nervous just means you care. thats literally the point',
+          'i was shaking before i typed my first message here too',
+          'take a deep breath. we are all in this together',
+          'the bravest thing is showing up scared and doing it anyway'
+        ]
+      },
+      {
+        regex: /\b(?:i feel|feeling|i.?m so|i am so) (.+)/i,
+        onMatch: function (m) { memory.lastTopic = 'feelings'; },
+        system: ['[SYSTEM] Emotional wavelength logged.'],
+        users: [
+          'the fact that {extract}... i relate so hard',
+          'you being honest about that takes courage',
+          'i feel that too. this room is a safe space',
+          'say more about that. we are listening'
+        ]
+      },
+      {
+        regex: /\b(?:i want to|i wanna|i wish|i hope|i need)\b (.+)/i,
+        onMatch: function () { memory.mood = 'vulnerable'; },
+        system: ['[SYSTEM] Dream frequency registered. Signal amplifying...'],
+        users: [
+          'thats such a real thing to want',
+          'manifesting that for you rn',
+          'you deserve {extract}. dont let anyone tell you different',
+          'the 7th room hears you. keep going'
+        ]
+      },
+      {
+        regex: /\b(?:i.?m from|i live in|from) (\w[\w\s]*)/i,
+        onMatch: function (m) { memory.userCountry = m[1].trim(); memory.topics.push('location'); },
+        system: ['[SYSTEM] Geolocation locked: {extract}. Signal strength: maximum.'],
+        users: [
+          '{extract}!! thats so cool. we really are global',
+          'no way!! i have always wanted to visit {extract}',
+          'different countries same chatroom same dream. i love it',
+          'the 7th room has no borders. just vibes'
+        ]
+      },
+      {
+        regex: /\b(?:hello|hi|hey+|hii+|yo|sup)\b/i,
+        onMatch: function () { memory.mood = 'excited'; },
+        system: ['[SYSTEM] New signal acknowledged. Welcome.'],
+        users: [
+          'hiii!! omg another one. the room is growing',
+          'welcome!! where are you from?',
+          'hey!! glad you found this place',
+          'hiiii! i love when new people come in'
+        ]
+      },
+      {
+        regex: /\bwhat (?:is|are|do you|should)\b/i,
+        onMatch: function () { memory.lastTopic = 'question'; },
+        system: ['[SYSTEM] Inquiry processed.'],
+        users: [
+          'good question honestly. i was wondering that too',
+          'idk but i think the system knows lol',
+          'scroll down! all the info is on this page',
+          'omg i literally asked the same thing when i got here'
+        ]
+      },
+      {
+        regex: /\b(?:love|adore|obsessed|into|passion)\b/i,
+        onMatch: function () { memory.mood = 'hype'; memory.topics.push('passion'); },
+        system: ['[SYSTEM] Passion frequency amplified.'],
+        users: [
+          'the passion in this room is UNREAL',
+          'you can literally feel the energy through the screen',
+          'this is why we are all here. love and music',
+          'i love this chat so much already'
+        ]
+      },
+      {
+        regex: /\b(?:dream|dreaming|manifest|destiny|fate|meant to be)\b/i,
+        onMatch: function () { memory.mood = 'vulnerable'; memory.topics.push('dreams'); },
+        system: ['[SYSTEM] Dream signal locked. The room remembers.'],
+        users: [
+          'i literally had a dream about this before i found the page',
+          'fate is real and this chatroom is proof',
+          'we were all meant to be here at the same time. thats not random',
+          'manifesting right now with you'
+        ]
+      },
+      {
+        regex: /\b(?:thank|thanks|ty|thx|appreciate)\b/i,
+        onMatch: function () { memory.mood = 'excited'; },
+        system: ['[SYSTEM] Gratitude signal received.'],
+        users: [
+          'of course!! this room looks out for each other',
+          'always. we are a team already and we havent even met',
+          'no need to thank us. you being here is enough',
+          'this energy is everything. WE got each other'
+        ]
+      },
+      {
+        regex: /\b(?:apply|submit|form|audition|sign up)\b/i,
+        onMatch: function () { memory.topics.push('applying'); },
+        system: ['[SYSTEM] Application intent registered. The 7th Room is watching.'],
+        users: [
+          'DO IT. literally just press send',
+          'i submitted mine and my hands havent stopped shaking',
+          'the hardest part is pressing submit. everything after that is destiny',
+          'go go go!! we are all applying together'
+        ]
+      },
+      {
+        regex: /\b(?:music|song|listen|album|kpop|k-pop|idol)\b/i,
+        onMatch: function () { memory.topics.push('music'); },
+        system: ['[SYSTEM] Musical resonance detected.'],
+        users: [
+          'music is literally the reason we are all in this room',
+          'what are you listening to rn? need recs',
+          'kpop saved my life ngl',
+          'the power of music brought us here. think about that'
+        ]
+      }
+    ];
+
+    // --- Context-Aware Follow-ups ---
+    // After memory accumulates, system drops follow-ups based on what it knows
+    function getContextFollowUp() {
+      var opts = [];
+      if (memory.userName && memory.messagesReceived === 2) {
+        opts.push('[SYSTEM] ' + memory.userName + ', your signal is getting stronger.');
+      }
+      if (memory.userCategory && memory.messagesReceived === 3) {
+        var cat = memory.userCategory;
+        opts.push('[SYSTEM] ' + cat.charAt(0).toUpperCase() + cat.slice(1) + ' profile logged. Compatibility scan: running...');
+      }
+      if (memory.userCountry && memory.messagesReceived >= 4) {
+        opts.push('[SYSTEM] Cross-referencing signal from ' + memory.userCountry + '... match potential: high.');
+      }
+      if (memory.topics.length >= 3 && memory.messagesReceived >= 5) {
+        opts.push('[SYSTEM] User profile deepening. The room is learning who you are.');
+      }
+      if (memory.mood === 'nervous' && memory.messagesReceived >= 3) {
+        opts.push('[SYSTEM] Courage index rising. Keep talking.');
+      }
+      if (memory.mood === 'hype' && memory.messagesReceived >= 4) {
+        opts.push('[SYSTEM] Energy levels: off the charts. The room feels you.');
+      }
+      return opts.length > 0 ? pickRandom(opts) : null;
+    }
+
+    // --- Mood-Aware User Reactions ---
+    // Other users react differently based on conversation mood
+    function getMoodReaction() {
+      var pool = {
+        neutral: ['real talk', 'felt that', 'honestly same', 'the energy in here rn', 'everyone here is so real'],
+        excited: ['YESSS', 'the vibes are IMMACULATE', 'i cant stop smiling rn', 'this room is literally glowing', 'WE ARE DOING THIS'],
+        nervous: ['deep breaths everyone', 'we got this. together.', 'nervous energy is just excitement in disguise', 'im holding everyones hand through the screen rn'],
+        vulnerable: ['that was so real. thank you for sharing', 'vulnerability is a superpower here', 'the fact that you can say that... respect', 'this room is a safe space. always'],
+        hype: ['LETS GOOO', 'inject this energy into my veins', 'the 7th room is ALIVE', 'somebody screenshot this moment', 'we are making history rn']
+      };
+      return pickRandom(pool[memory.mood] || pool.neutral);
+    }
+
+    // --- Fallback for unmatched input ---
+    // Uses reflection to echo the user's words back contextually
+    function getFallbackResponse(text) {
+      var reflected = reflect(text);
+      var templates = [
+        'wait... ' + reflected + '? tell us more about that',
+        'the way ' + reflected + '... i felt that in my soul',
+        'when you say ' + reflected + ' i think everyone here relates',
+        'thats interesting. what made you think about that?',
+        'ok but ' + reflected + ' is such a mood',
+        'i was literally just thinking about that too'
+      ];
+      return pickRandom(templates);
+    }
+
+    var fallbackSystem = [
+      '[SYSTEM] Signal processed. Frequency: unique.',
+      '[SYSTEM] Voice pattern logged. Continue.',
+      '[SYSTEM] Transmission stored in room memory.',
+      '[SYSTEM] Connection deepening.',
+      '[SYSTEM] The room is listening. Always.'
+    ];
+
+    // --- Auto Conversation Threads ---
     var conversations = [
-      // greeting wave
       [
         { text: 'hello? is anyone here?', pause: 1200 },
         { text: 'omg yes!! hi!!', pause: 800 },
         { text: 'wait how many people are in here right now', pause: 1000 }
       ],
-      // nervous energy
       [
         { text: 'is anyone else super nervous rn', pause: 900 },
         { text: 'literally shaking lol', pause: 700 },
         { text: 'same but like... the good kind of nervous?', pause: 1100 }
       ],
-      // how they found it
       [
         { text: 'how did you guys find this??', pause: 1000 },
         { text: 'a friend sent me the link at like 2am', pause: 900 },
         { text: 'i saw it on tiktok and something just clicked', pause: 800 },
         { text: 'i literally googled "auditions that feel different" lol', pause: 1200 }
       ],
-      // dreams
-      [
-        { text: 'i have been waiting for something like this my whole life', pause: 1100 },
-        { text: 'fr fr. this doesnt feel like a normal audition', pause: 900 },
-        { text: 'it feels like its looking for US not the other way around', pause: 1000 }
-      ],
-      // encouragement
-      [
-        { text: 'ok im actually going to apply right now', pause: 800 },
-        { text: 'DO IT. we believe in you', pause: 600 },
-        { text: 'sending you all the good energy', pause: 700 },
-        { text: 'this room has the best vibes honestly', pause: 900 }
-      ],
-      // about themselves
       [
         { text: 'what category is everyone going for?', pause: 1000 },
         { text: 'vocal!! singing is literally my whole life', pause: 900 },
         { text: 'dance for me. i cant stop moving lol', pause: 800 },
         { text: 'all-rounder bc i refuse to choose', pause: 700 }
       ],
-      // deep thoughts
-      [
-        { text: 'does anyone else feel like they were meant to find this page', pause: 1200 },
-        { text: 'yes. literally yes. i cant explain it', pause: 1000 },
-        { text: 'its giving fate', pause: 600 }
-      ],
-      // hype
       [
         { text: 'imagine if we all end up in the same group', pause: 1000 },
         { text: 'STOP i would actually cry', pause: 700 },
         { text: 'manifesting this so hard rn', pause: 800 },
         { text: 'the 7th room chose us', pause: 900 }
       ],
-      // vulnerability
       [
         { text: 'not gonna lie im scared to submit my video', pause: 1100 },
         { text: 'same. but they said authenticity over perfection right?', pause: 1000 },
         { text: 'just be you. thats literally all they want', pause: 800 },
         { text: 'ok that actually made me feel better ty', pause: 700 }
       ],
-      // late night energy
+      [
+        { text: 'does anyone else feel like they were meant to find this page', pause: 1200 },
+        { text: 'yes. literally yes. i cant explain it', pause: 1000 },
+        { text: 'its giving fate', pause: 600 }
+      ],
       [
         { text: 'its 3am here and i cant sleep bc of this', pause: 1000 },
         { text: 'lol its 4am for me. we are unhinged', pause: 800 },
         { text: 'sleep is for people who dont have dreams to chase', pause: 1000 }
+      ],
+      [
+        { text: 'ok real talk what if we dont get in', pause: 1100 },
+        { text: 'dont think like that. the room heard you', pause: 900 },
+        { text: 'even being here means something. we already took the first step', pause: 1000 },
+        { text: 'no matter what happens we found each other. thats not nothing', pause: 1200 }
+      ],
+      [
+        { text: 'i showed my friend and she is applying too', pause: 900 },
+        { text: 'the more the merrier!! spread the signal', pause: 800 },
+        { text: 'imagine if best friends end up in the group together', pause: 1000 }
       ]
     ];
+    var conversationIndex = 0;
 
-    // Keyword patterns and responses when user types
-    var keywordRules = [
-      {
-        patterns: ['sing', 'voice', 'vocal', 'song'],
-        system: '[SYSTEM] Vocal frequency detected. Signal strength: high.',
-        reactions: [
-          'omg a vocalist!! what do you sing?',
-          'vocal line rise up',
-          'sing something for us!',
-          'i bet your voice is amazing',
-          'yesss we need more vocalists'
-        ]
-      },
-      {
-        patterns: ['dance', 'choreo', 'move', 'dancing'],
-        system: '[SYSTEM] Movement signature logged.',
-        reactions: [
-          'dancer!! what style?',
-          'dance line assemble',
-          'i love dancers sm',
-          'show us your moves when you get in!',
-          'the stage needs you'
-        ]
-      },
-      {
-        patterns: ['rap', 'bars', 'flow', 'write'],
-        system: '[SYSTEM] Lyrical frequency analyzed.',
-        reactions: [
-          'a rapper?? ok i see you',
-          'spit some bars!',
-          'rap line is gonna be insane',
-          'words are powerful. respect',
-          'we need that energy'
-        ]
-      },
-      {
-        patterns: ['nervous', 'scared', 'afraid', 'anxious', 'worry'],
-        system: '[SYSTEM] Emotional resonance detected. You are not alone.',
-        reactions: [
-          'dont be!! we are all in this together',
-          'same tbh but thats how you know it matters',
-          'being nervous means you care. thats a good thing',
-          'the fact that youre here means something',
-          'we got you. this room is safe'
-        ]
-      },
-      {
-        patterns: ['hello', 'hi', 'hey', 'hii', 'hiii', 'heyyy'],
-        system: '[SYSTEM] New signal acknowledged.',
-        reactions: [
-          'hiii!! welcome!!',
-          'omg hi! where are you from?',
-          'another one! the room is filling up',
-          'welcome to the chaos lol',
-          'heyyy!! glad youre here'
-        ]
-      },
-      {
-        patterns: ['dream', 'wish', 'hope', 'want', 'future'],
-        system: '[SYSTEM] Dream frequency registered.',
-        reactions: [
-          'same dream different country. i love that',
-          'we are all here for the same reason',
-          'dreams are valid. always.',
-          'this is just the beginning',
-          'manifesting this for all of us'
-        ]
-      },
-      {
-        patterns: ['love', 'music', 'passion', 'heart'],
-        system: '[SYSTEM] Passion signal amplified.',
-        reactions: [
-          'you can feel it right? this room has something special',
-          'music connects everything',
-          'thats exactly why we are here',
-          'i love this energy so much',
-          'the passion in this chat is unreal'
-        ]
-      },
-      {
-        patterns: ['age', 'old', 'young', 'year', 'born'],
-        system: '[SYSTEM] Timeline data noted.',
-        reactions: [
-          'age doesnt matter here. only heart',
-          'gen z taking over fr',
-          'we are all young enough to dream',
-          'its never too early and never too late'
-        ]
-      },
-      {
-        patterns: ['country', 'where', 'from', 'city', 'live'],
-        system: '[SYSTEM] Geolocation inquiry logged.',
-        reactions: [
-          'the fact that we are all from different places makes this so cool',
-          'global squad!',
-          'different countries same dream',
-          'thats what makes this special. 7 countries 1 room'
-        ]
-      },
-      {
-        patterns: ['apply', 'submit', 'form', 'video', 'audition'],
-        system: '[SYSTEM] Application intent registered. The room is watching.',
-        reactions: [
-          'do it!! you wont regret it',
-          'i just submitted mine. my hands are shaking',
-          'go go go!! we believe in you',
-          'the hardest part is clicking send. just do it',
-          'we are all applying together. its a vibe'
-        ]
-      },
-      {
-        patterns: ['thank', 'thanks', 'ty', 'thx'],
-        system: '[SYSTEM] Gratitude logged.',
-        reactions: [
-          'of course! we are all in this together',
-          'this room supports each other',
-          'always!! good luck to you',
-          'we got each others backs'
-        ]
-      }
-    ];
-
-    // Generic fallback responses when no keyword matches
-    var fallbackSystem = [
-      '[SYSTEM] Message received. Signal strong.',
-      '[SYSTEM] Voice logged. We hear you.',
-      '[SYSTEM] Transmission recorded.',
-      '[SYSTEM] Connection stable. Continue.',
-      '[SYSTEM] The room acknowledges your presence.'
-    ];
-
-    var fallbackReactions = [
-      'real talk',
-      'felt that',
-      'fr fr',
-      'say it louder',
-      'this!!',
-      'honestly same',
-      'vibe check: passed',
-      'the energy in here rn',
-      'i love this chat so much',
-      'everyone here is so real'
-    ];
-
+    // --- Utility Functions ---
     function pickRandom(arr) {
       return arr[Math.floor(Math.random() * arr.length)];
     }
 
-    function pickAndRemove(arr) {
-      var i = Math.floor(Math.random() * arr.length);
-      return arr.splice(i, 1)[0];
-    }
+    var usedHandleIndexes = [];
+    var usedCityIndexes = [];
 
     function createUser() {
-      var city = pickAndRemove(cities.slice());
-      if (!city) city = pickRandom(cities);
-      var handle = pickAndRemove(handles.slice());
-      if (!handle) handle = pickRandom(handles);
-      var user = {
-        handle: handle,
-        city: city,
-        cssClass: pickRandom(userClasses)
-      };
+      var hi = Math.floor(Math.random() * handles.length);
+      while (usedHandleIndexes.indexOf(hi) !== -1 && usedHandleIndexes.length < handles.length) {
+        hi = Math.floor(Math.random() * handles.length);
+      }
+      usedHandleIndexes.push(hi);
+      var ci = Math.floor(Math.random() * cities.length);
+      while (usedCityIndexes.indexOf(ci) !== -1 && usedCityIndexes.length < cities.length) {
+        ci = Math.floor(Math.random() * cities.length);
+      }
+      usedCityIndexes.push(ci);
+      var user = { handle: handles[hi], city: cities[ci], cssClass: pickRandom(userClasses) };
       activeUsers.push(user);
       return user;
     }
 
     function getOrCreateUser() {
-      if (activeUsers.length > 0 && Math.random() > 0.4) {
+      if (activeUsers.length > 0 && Math.random() > 0.35) {
         return pickRandom(activeUsers);
       }
       return createUser();
     }
 
-    function scrollChat() {
-      body.scrollTop = body.scrollHeight;
-    }
+    function scrollChat() { body.scrollTop = body.scrollHeight; }
 
     function typeText(el, text, speed, callback) {
       var i = 0;
@@ -925,9 +1037,7 @@
           i++;
           scrollChat();
           setTimeout(tick, speed + (Math.random() * speed * 0.5));
-        } else if (callback) {
-          callback();
-        }
+        } else if (callback) { callback(); }
       }
       tick();
     }
@@ -953,12 +1063,15 @@
     function processQueue() {
       if (isTyping || messageQueue.length === 0) return;
       var msg = messageQueue.shift();
-      setTimeout(function () {
-        addMessage(msg.text, msg.cssClass, msg.speed);
-      }, msg.delay);
+      setTimeout(function () { addMessage(msg.text, msg.cssClass, msg.speed); }, msg.delay);
     }
 
-    // Play a full conversation thread with named users
+    function connectNewUser() {
+      var user = createUser();
+      queueMessage('[SYSTEM] ' + user.handle + ' connected from ' + user.city + '.', 'system', 16, 400);
+      return user;
+    }
+
     function playConversation(thread) {
       thread.forEach(function (line) {
         var user = getOrCreateUser();
@@ -966,134 +1079,122 @@
       });
     }
 
-    // Connect a new user with system announcement
-    function connectNewUser() {
-      var user = createUser();
-      queueMessage('[SYSTEM] ' + user.handle + ' connected from ' + user.city + '.', 'system', 16, 400);
-      return user;
-    }
-
-    // Play next conversation thread
     function playNextConversation() {
       if (conversationIndex >= conversations.length) {
-        // Shuffle and restart
         conversations.sort(function () { return Math.random() - 0.5; });
         conversationIndex = 0;
       }
       var thread = conversations[conversationIndex++];
-
-      // Sometimes connect a new user before the thread
-      if (Math.random() > 0.5) {
-        connectNewUser();
-      }
-
-      // Small delay then play the thread
-      setTimeout(function () {
-        playConversation(thread);
-      }, 1200);
+      if (Math.random() > 0.5) connectNewUser();
+      setTimeout(function () { playConversation(thread); }, 1200);
     }
 
-    // Find keyword match for user input
-    function findKeywordMatch(text) {
-      var lower = text.toLowerCase();
-      for (var i = 0; i < keywordRules.length; i++) {
-        var rule = keywordRules[i];
-        for (var j = 0; j < rule.patterns.length; j++) {
-          if (lower.indexOf(rule.patterns[j]) !== -1) {
-            return rule;
-          }
+    // --- Eliza Input Processor ---
+    function processUserInput(text) {
+      memory.messagesReceived++;
+      var matched = false;
+      var systemMsg = null;
+      var userReaction = null;
+      var extract = '';
+
+      // Try each Eliza rule
+      for (var i = 0; i < elizaRules.length; i++) {
+        var rule = elizaRules[i];
+        var m = text.match(rule.regex);
+        if (m) {
+          matched = true;
+          extract = m[1] ? m[1].trim() : '';
+          if (rule.onMatch) rule.onMatch(m);
+
+          // Pick system response and fill template
+          var data = { extract: extract, input: reflect(text) };
+          systemMsg = fillTemplate(pickRandom(rule.system), data);
+          userReaction = fillTemplate(pickRandom(rule.users), data);
+          break;
         }
       }
-      return null;
+
+      if (!matched) {
+        systemMsg = pickRandom(fallbackSystem);
+        userReaction = getFallbackResponse(text);
+      }
+
+      // Queue system response
+      setTimeout(function () {
+        queueMessage(systemMsg, 'system', 16, 400);
+      }, 600);
+
+      // Queue user reaction from a room member
+      setTimeout(function () {
+        var u = getOrCreateUser();
+        queueMessage(u.handle + ': ' + userReaction, u.cssClass, 28, 500);
+      }, 1800);
+
+      // 50% chance second user chimes in with mood-based reaction
+      if (Math.random() > 0.5) {
+        setTimeout(function () {
+          var u2 = getOrCreateUser();
+          queueMessage(u2.handle + ': ' + getMoodReaction(), u2.cssClass, 28, 600);
+        }, 3200);
+      }
+
+      // Every few messages, system drops a context-aware follow-up
+      if (memory.messagesReceived % 3 === 0) {
+        var followUp = getContextFollowUp();
+        if (followUp) {
+          setTimeout(function () {
+            queueMessage(followUp, 'system', 16, 500);
+          }, 4500);
+        }
+      }
     }
 
-    // Initial boot sequence
+    // --- Boot Sequence ---
     function startChatSequence() {
       if (chatStarted) return;
       chatStarted = true;
-
-      // Shuffle conversations
       conversations.sort(function () { return Math.random() - 0.5; });
 
       queueMessage('[SYSTEM] Room initialized.', 'system', 16, 0);
       queueMessage('[SYSTEM] Scanning for connections...', 'system', 16, 600);
 
-      // First user connects
       setTimeout(function () {
         var u1 = connectNewUser();
         queueMessage(u1.handle + ': hello? is anyone here?', u1.cssClass, 28, 1000);
       }, 2200);
 
-      // Second user connects and responds
       setTimeout(function () {
         var u2 = connectNewUser();
         queueMessage(u2.handle + ': omg hi!! i thought i was alone', u2.cssClass, 28, 900);
       }, 5000);
 
-      // Third user + conversation starts flowing
       setTimeout(function () {
         var u3 = connectNewUser();
         queueMessage(u3.handle + ': wait this is real?? how did you find this?', u3.cssClass, 28, 800);
       }, 7500);
 
-      // Slot count
       setTimeout(function () {
         var slots = 3 + Math.floor(Math.random() * 3);
         queueMessage('[SYSTEM] ' + slots + ' of 7 slots remaining...', 'system', 16, 400);
       }, 10000);
 
-      // Start conversation threads
       setTimeout(function () { playNextConversation(); }, 12000);
 
-      // Keep conversations going
       setInterval(function () {
         if (!isTyping && messageQueue.length === 0) {
           playNextConversation();
         }
-      }, 12000 + Math.random() * 8000);
+      }, 14000);
     }
 
-    // Interactive: user sends a message with smart responses
+    // --- User Input Handler ---
     function sendUserMessage() {
       var text = input.value.trim();
       if (!text || isTyping) return;
       input.value = '';
-      lastUserMsg = text;
 
-      // Show user message
       queueMessage('you: ' + text, 'user-you', 10, 0);
-
-      var match = findKeywordMatch(text);
-
-      if (match) {
-        // System response based on keyword
-        setTimeout(function () {
-          queueMessage(match.system, 'system', 16, 400);
-        }, 600);
-
-        // 1-2 other users react contextually
-        setTimeout(function () {
-          var u = getOrCreateUser();
-          queueMessage(u.handle + ': ' + pickRandom(match.reactions), u.cssClass, 28, 500);
-        }, 1800);
-
-        if (Math.random() > 0.4) {
-          setTimeout(function () {
-            var u2 = getOrCreateUser();
-            queueMessage(u2.handle + ': ' + pickRandom(match.reactions), u2.cssClass, 28, 600);
-          }, 3200);
-        }
-      } else {
-        // Fallback: generic system + user reaction
-        setTimeout(function () {
-          queueMessage(pickRandom(fallbackSystem), 'system', 16, 400);
-        }, 600);
-
-        setTimeout(function () {
-          var u = getOrCreateUser();
-          queueMessage(u.handle + ': ' + pickRandom(fallbackReactions), u.cssClass, 28, 500);
-        }, 2000);
-      }
+      processUserInput(text);
     }
 
     if (input) {
