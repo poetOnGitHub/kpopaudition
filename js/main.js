@@ -517,14 +517,6 @@
         // Simulate submission (no Formspree ID configured)
         setTimeout(function () {
           submitBtn.classList.remove('loading');
-          data.timestamp = new Date().toISOString();
-          try {
-            var stored = JSON.parse(localStorage.getItem('7throom_applications') || '[]');
-            stored.push(data);
-            localStorage.setItem('7throom_applications', JSON.stringify(stored));
-          } catch (err) {
-            // localStorage not available, ignore
-          }
           showModal();
           form.reset();
           if (charCount) charCount.textContent = '0';
