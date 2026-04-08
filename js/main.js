@@ -653,75 +653,270 @@
       'Amsterdam', 'Dubai', 'Taipei', 'Singapore', 'Lisbon'
     ];
 
-    var userMessages = [
-      'hello? is anyone here?',
-      'i can hear you.',
-      'how did i get here?',
-      'wait... is this real?',
-      'can anyone see this?',
-      'i found the link at 3am and i just clicked',
-      'this feels different from other auditions',
-      'where is everyone from?',
-      'i think i was meant to find this',
-      'my heart is racing right now',
-      'hi from the other side of the world',
-      'something told me to click that link',
-      'is anyone else nervous?',
-      'i have been looking for something like this',
-      'the music brought me here',
-      'i just want to be heard',
-      'this chatroom feels alive',
-      'are we really doing this?',
-      'i practiced all night for this',
-      'what if this changes everything?',
-      'i almost closed the tab but something stopped me',
-      'the vibes here are unreal',
-      'sending good energy to everyone',
-      'we are all here for a reason right?',
-      'i showed my friend and she is applying too',
-      'been dreaming about this since i was 12'
-    ];
-
-    var systemResponses = [
-      '[SYSTEM] Your signal has been detected.',
-      '[SYSTEM] Connection strength: strong.',
-      '[SYSTEM] Message logged and stored.',
-      '[SYSTEM] We see you.',
-      '[SYSTEM] Signal received from your location.',
-      '[SYSTEM] You are being heard.',
-      '[SYSTEM] Frequency match: analyzing...',
-      '[SYSTEM] Stay connected. Stay ready.',
-      '[SYSTEM] Your voice matters here.',
-      '[SYSTEM] The room is listening.',
-      '[SYSTEM] Signal noted. Stand by.',
-      '[SYSTEM] Connection verified.',
-      '[SYSTEM] You belong here.'
+    var handles = [
+      'star_girl', 'moonchild99', 'neon.dream', 'cherry_bxm',
+      'luv4music', 'glittergrl', 'skyline_', 'velvet.voice',
+      'sugar_plum', 'oceangirl', 'pixiedust', 'aurora.wav',
+      'dreamcatcher', 'honey_bee', 'cloud.nine', 'sparkle_xx',
+      'midnight_sun', 'blossom.mp3', 'starry_eyed', 'pink.static',
+      'luna_moth', 'crystal.clear', 'daisychain', 'prism.girl'
     ];
 
     var userClasses = ['user-1', 'user-2', 'user-3'];
-    var usedCities = [];
+    var activeUsers = [];
     var isTyping = false;
     var messageQueue = [];
     var chatStarted = false;
-    var autoInterval = null;
+    var lastUserMsg = '';
+    var conversationIndex = 0;
+
+    // Conversation threads that play out naturally
+    var conversations = [
+      // greeting wave
+      [
+        { text: 'hello? is anyone here?', pause: 1200 },
+        { text: 'omg yes!! hi!!', pause: 800 },
+        { text: 'wait how many people are in here right now', pause: 1000 }
+      ],
+      // nervous energy
+      [
+        { text: 'is anyone else super nervous rn', pause: 900 },
+        { text: 'literally shaking lol', pause: 700 },
+        { text: 'same but like... the good kind of nervous?', pause: 1100 }
+      ],
+      // how they found it
+      [
+        { text: 'how did you guys find this??', pause: 1000 },
+        { text: 'a friend sent me the link at like 2am', pause: 900 },
+        { text: 'i saw it on tiktok and something just clicked', pause: 800 },
+        { text: 'i literally googled "auditions that feel different" lol', pause: 1200 }
+      ],
+      // dreams
+      [
+        { text: 'i have been waiting for something like this my whole life', pause: 1100 },
+        { text: 'fr fr. this doesnt feel like a normal audition', pause: 900 },
+        { text: 'it feels like its looking for US not the other way around', pause: 1000 }
+      ],
+      // encouragement
+      [
+        { text: 'ok im actually going to apply right now', pause: 800 },
+        { text: 'DO IT. we believe in you', pause: 600 },
+        { text: 'sending you all the good energy', pause: 700 },
+        { text: 'this room has the best vibes honestly', pause: 900 }
+      ],
+      // about themselves
+      [
+        { text: 'what category is everyone going for?', pause: 1000 },
+        { text: 'vocal!! singing is literally my whole life', pause: 900 },
+        { text: 'dance for me. i cant stop moving lol', pause: 800 },
+        { text: 'all-rounder bc i refuse to choose', pause: 700 }
+      ],
+      // deep thoughts
+      [
+        { text: 'does anyone else feel like they were meant to find this page', pause: 1200 },
+        { text: 'yes. literally yes. i cant explain it', pause: 1000 },
+        { text: 'its giving fate', pause: 600 }
+      ],
+      // hype
+      [
+        { text: 'imagine if we all end up in the same group', pause: 1000 },
+        { text: 'STOP i would actually cry', pause: 700 },
+        { text: 'manifesting this so hard rn', pause: 800 },
+        { text: 'the 7th room chose us', pause: 900 }
+      ],
+      // vulnerability
+      [
+        { text: 'not gonna lie im scared to submit my video', pause: 1100 },
+        { text: 'same. but they said authenticity over perfection right?', pause: 1000 },
+        { text: 'just be you. thats literally all they want', pause: 800 },
+        { text: 'ok that actually made me feel better ty', pause: 700 }
+      ],
+      // late night energy
+      [
+        { text: 'its 3am here and i cant sleep bc of this', pause: 1000 },
+        { text: 'lol its 4am for me. we are unhinged', pause: 800 },
+        { text: 'sleep is for people who dont have dreams to chase', pause: 1000 }
+      ]
+    ];
+
+    // Keyword patterns and responses when user types
+    var keywordRules = [
+      {
+        patterns: ['sing', 'voice', 'vocal', 'song'],
+        system: '[SYSTEM] Vocal frequency detected. Signal strength: high.',
+        reactions: [
+          'omg a vocalist!! what do you sing?',
+          'vocal line rise up',
+          'sing something for us!',
+          'i bet your voice is amazing',
+          'yesss we need more vocalists'
+        ]
+      },
+      {
+        patterns: ['dance', 'choreo', 'move', 'dancing'],
+        system: '[SYSTEM] Movement signature logged.',
+        reactions: [
+          'dancer!! what style?',
+          'dance line assemble',
+          'i love dancers sm',
+          'show us your moves when you get in!',
+          'the stage needs you'
+        ]
+      },
+      {
+        patterns: ['rap', 'bars', 'flow', 'write'],
+        system: '[SYSTEM] Lyrical frequency analyzed.',
+        reactions: [
+          'a rapper?? ok i see you',
+          'spit some bars!',
+          'rap line is gonna be insane',
+          'words are powerful. respect',
+          'we need that energy'
+        ]
+      },
+      {
+        patterns: ['nervous', 'scared', 'afraid', 'anxious', 'worry'],
+        system: '[SYSTEM] Emotional resonance detected. You are not alone.',
+        reactions: [
+          'dont be!! we are all in this together',
+          'same tbh but thats how you know it matters',
+          'being nervous means you care. thats a good thing',
+          'the fact that youre here means something',
+          'we got you. this room is safe'
+        ]
+      },
+      {
+        patterns: ['hello', 'hi', 'hey', 'hii', 'hiii', 'heyyy'],
+        system: '[SYSTEM] New signal acknowledged.',
+        reactions: [
+          'hiii!! welcome!!',
+          'omg hi! where are you from?',
+          'another one! the room is filling up',
+          'welcome to the chaos lol',
+          'heyyy!! glad youre here'
+        ]
+      },
+      {
+        patterns: ['dream', 'wish', 'hope', 'want', 'future'],
+        system: '[SYSTEM] Dream frequency registered.',
+        reactions: [
+          'same dream different country. i love that',
+          'we are all here for the same reason',
+          'dreams are valid. always.',
+          'this is just the beginning',
+          'manifesting this for all of us'
+        ]
+      },
+      {
+        patterns: ['love', 'music', 'passion', 'heart'],
+        system: '[SYSTEM] Passion signal amplified.',
+        reactions: [
+          'you can feel it right? this room has something special',
+          'music connects everything',
+          'thats exactly why we are here',
+          'i love this energy so much',
+          'the passion in this chat is unreal'
+        ]
+      },
+      {
+        patterns: ['age', 'old', 'young', 'year', 'born'],
+        system: '[SYSTEM] Timeline data noted.',
+        reactions: [
+          'age doesnt matter here. only heart',
+          'gen z taking over fr',
+          'we are all young enough to dream',
+          'its never too early and never too late'
+        ]
+      },
+      {
+        patterns: ['country', 'where', 'from', 'city', 'live'],
+        system: '[SYSTEM] Geolocation inquiry logged.',
+        reactions: [
+          'the fact that we are all from different places makes this so cool',
+          'global squad!',
+          'different countries same dream',
+          'thats what makes this special. 7 countries 1 room'
+        ]
+      },
+      {
+        patterns: ['apply', 'submit', 'form', 'video', 'audition'],
+        system: '[SYSTEM] Application intent registered. The room is watching.',
+        reactions: [
+          'do it!! you wont regret it',
+          'i just submitted mine. my hands are shaking',
+          'go go go!! we believe in you',
+          'the hardest part is clicking send. just do it',
+          'we are all applying together. its a vibe'
+        ]
+      },
+      {
+        patterns: ['thank', 'thanks', 'ty', 'thx'],
+        system: '[SYSTEM] Gratitude logged.',
+        reactions: [
+          'of course! we are all in this together',
+          'this room supports each other',
+          'always!! good luck to you',
+          'we got each others backs'
+        ]
+      }
+    ];
+
+    // Generic fallback responses when no keyword matches
+    var fallbackSystem = [
+      '[SYSTEM] Message received. Signal strong.',
+      '[SYSTEM] Voice logged. We hear you.',
+      '[SYSTEM] Transmission recorded.',
+      '[SYSTEM] Connection stable. Continue.',
+      '[SYSTEM] The room acknowledges your presence.'
+    ];
+
+    var fallbackReactions = [
+      'real talk',
+      'felt that',
+      'fr fr',
+      'say it louder',
+      'this!!',
+      'honestly same',
+      'vibe check: passed',
+      'the energy in here rn',
+      'i love this chat so much',
+      'everyone here is so real'
+    ];
 
     function pickRandom(arr) {
       return arr[Math.floor(Math.random() * arr.length)];
     }
 
-    function pickCity() {
-      var available = cities.filter(function (c) { return usedCities.indexOf(c) === -1; });
-      if (available.length === 0) { usedCities = []; available = cities; }
-      var city = pickRandom(available);
-      usedCities.push(city);
-      return city;
+    function pickAndRemove(arr) {
+      var i = Math.floor(Math.random() * arr.length);
+      return arr.splice(i, 1)[0];
+    }
+
+    function createUser() {
+      var city = pickAndRemove(cities.slice());
+      if (!city) city = pickRandom(cities);
+      var handle = pickAndRemove(handles.slice());
+      if (!handle) handle = pickRandom(handles);
+      var user = {
+        handle: handle,
+        city: city,
+        cssClass: pickRandom(userClasses)
+      };
+      activeUsers.push(user);
+      return user;
+    }
+
+    function getOrCreateUser() {
+      if (activeUsers.length > 0 && Math.random() > 0.4) {
+        return pickRandom(activeUsers);
+      }
+      return createUser();
     }
 
     function scrollChat() {
       body.scrollTop = body.scrollHeight;
     }
 
-    // Type text character by character into an element
     function typeText(el, text, speed, callback) {
       var i = 0;
       function tick() {
@@ -737,7 +932,6 @@
       tick();
     }
 
-    // Add and type a message
     function addMessage(text, cssClass, typingSpeed, callback) {
       var p = document.createElement('p');
       p.className = 'chat-msg ' + cssClass;
@@ -764,57 +958,142 @@
       }, msg.delay);
     }
 
-    // Generate a random "someone connected + says something" pair
-    function generateRandomExchange() {
-      var city = pickCity();
-      var userClass = pickRandom(userClasses);
-      var userMsg = pickRandom(userMessages);
-
-      queueMessage('[SYSTEM] User connected from ' + city + '.', 'system', 18, 400);
-      queueMessage(userMsg, userClass, 30, 800);
+    // Play a full conversation thread with named users
+    function playConversation(thread) {
+      thread.forEach(function (line) {
+        var user = getOrCreateUser();
+        queueMessage(user.handle + ': ' + line.text, user.cssClass, 28, line.pause || 800);
+      });
     }
 
-    // Initial boot sequence for the chatroom
+    // Connect a new user with system announcement
+    function connectNewUser() {
+      var user = createUser();
+      queueMessage('[SYSTEM] ' + user.handle + ' connected from ' + user.city + '.', 'system', 16, 400);
+      return user;
+    }
+
+    // Play next conversation thread
+    function playNextConversation() {
+      if (conversationIndex >= conversations.length) {
+        // Shuffle and restart
+        conversations.sort(function () { return Math.random() - 0.5; });
+        conversationIndex = 0;
+      }
+      var thread = conversations[conversationIndex++];
+
+      // Sometimes connect a new user before the thread
+      if (Math.random() > 0.5) {
+        connectNewUser();
+      }
+
+      // Small delay then play the thread
+      setTimeout(function () {
+        playConversation(thread);
+      }, 1200);
+    }
+
+    // Find keyword match for user input
+    function findKeywordMatch(text) {
+      var lower = text.toLowerCase();
+      for (var i = 0; i < keywordRules.length; i++) {
+        var rule = keywordRules[i];
+        for (var j = 0; j < rule.patterns.length; j++) {
+          if (lower.indexOf(rule.patterns[j]) !== -1) {
+            return rule;
+          }
+        }
+      }
+      return null;
+    }
+
+    // Initial boot sequence
     function startChatSequence() {
       if (chatStarted) return;
       chatStarted = true;
 
-      var slotsLeft = 3 + Math.floor(Math.random() * 3); // 3-5
+      // Shuffle conversations
+      conversations.sort(function () { return Math.random() - 0.5; });
 
-      queueMessage('[SYSTEM] Room initialized.', 'system', 18, 0);
-      queueMessage('[SYSTEM] Waiting for connections...', 'system', 18, 600);
+      queueMessage('[SYSTEM] Room initialized.', 'system', 16, 0);
+      queueMessage('[SYSTEM] Scanning for connections...', 'system', 16, 600);
 
-      // First few connections
-      setTimeout(function () { generateRandomExchange(); }, 2500);
-      setTimeout(function () { generateRandomExchange(); }, 5500);
-      setTimeout(function () { generateRandomExchange(); }, 9000);
-
-      // Slots remaining
+      // First user connects
       setTimeout(function () {
-        queueMessage('[SYSTEM] ' + slotsLeft + ' of 7 slots remaining...', 'system', 18, 400);
-      }, 12000);
+        var u1 = connectNewUser();
+        queueMessage(u1.handle + ': hello? is anyone here?', u1.cssClass, 28, 1000);
+      }, 2200);
 
-      // Keep generating random messages periodically
-      autoInterval = setInterval(function () {
+      // Second user connects and responds
+      setTimeout(function () {
+        var u2 = connectNewUser();
+        queueMessage(u2.handle + ': omg hi!! i thought i was alone', u2.cssClass, 28, 900);
+      }, 5000);
+
+      // Third user + conversation starts flowing
+      setTimeout(function () {
+        var u3 = connectNewUser();
+        queueMessage(u3.handle + ': wait this is real?? how did you find this?', u3.cssClass, 28, 800);
+      }, 7500);
+
+      // Slot count
+      setTimeout(function () {
+        var slots = 3 + Math.floor(Math.random() * 3);
+        queueMessage('[SYSTEM] ' + slots + ' of 7 slots remaining...', 'system', 16, 400);
+      }, 10000);
+
+      // Start conversation threads
+      setTimeout(function () { playNextConversation(); }, 12000);
+
+      // Keep conversations going
+      setInterval(function () {
         if (!isTyping && messageQueue.length === 0) {
-          generateRandomExchange();
+          playNextConversation();
         }
-      }, 8000 + Math.random() * 6000);
+      }, 12000 + Math.random() * 8000);
     }
 
-    // Interactive: user sends a message
+    // Interactive: user sends a message with smart responses
     function sendUserMessage() {
       var text = input.value.trim();
       if (!text || isTyping) return;
       input.value = '';
+      lastUserMsg = text;
 
       // Show user message
-      queueMessage('you: ' + text, 'user-you', 12, 0);
+      queueMessage('you: ' + text, 'user-you', 10, 0);
 
-      // System responds after a delay
-      setTimeout(function () {
-        queueMessage(pickRandom(systemResponses), 'system', 18, 300);
-      }, 800);
+      var match = findKeywordMatch(text);
+
+      if (match) {
+        // System response based on keyword
+        setTimeout(function () {
+          queueMessage(match.system, 'system', 16, 400);
+        }, 600);
+
+        // 1-2 other users react contextually
+        setTimeout(function () {
+          var u = getOrCreateUser();
+          queueMessage(u.handle + ': ' + pickRandom(match.reactions), u.cssClass, 28, 500);
+        }, 1800);
+
+        if (Math.random() > 0.4) {
+          setTimeout(function () {
+            var u2 = getOrCreateUser();
+            queueMessage(u2.handle + ': ' + pickRandom(match.reactions), u2.cssClass, 28, 600);
+          }, 3200);
+        }
+      } else {
+        // Fallback: generic system + user reaction
+        setTimeout(function () {
+          queueMessage(pickRandom(fallbackSystem), 'system', 16, 400);
+        }, 600);
+
+        setTimeout(function () {
+          var u = getOrCreateUser();
+          queueMessage(u.handle + ': ' + pickRandom(fallbackReactions), u.cssClass, 28, 500);
+        }, 2000);
+      }
     }
 
     if (input) {
@@ -833,7 +1112,7 @@
       });
     }
 
-    // Start typing when chatroom scrolls into view
+    // Start when chatroom scrolls into view
     var chatObserver = new IntersectionObserver(function (entries) {
       if (entries[0].isIntersecting) {
         chatObserver.disconnect();
