@@ -5,6 +5,56 @@
 (function () {
   'use strict';
 
+  // --- Word-by-Word Text Reveal ---
+  function initTextReveal() {
+    var titles = document.querySelectorAll('.section-title');
+    if (!titles.length) return;
+
+    titles.forEach(function (title) {
+      // Store original HTML, split into words while preserving <br> tags
+      var html = title.innerHTML;
+      // Split on whitespace but keep <br> tags
+      var parts = html.split(/(<br\s*\/?>)/gi);
+      var wrapped = '';
+
+      parts.forEach(function (part) {
+        if (/^<br/i.test(part)) {
+          wrapped += part;
+        } else {
+          var words = part.split(/\s+/).filter(function (w) { return w.length > 0; });
+          words.forEach(function (word) {
+            wrapped += '<span class="word-reveal">' + word + '</span> ';
+          });
+        }
+      });
+
+      title.innerHTML = wrapped;
+      title.classList.add('text-reveal-ready');
+    });
+
+    // Observe each title
+    var observer = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) {
+          var words = entry.target.querySelectorAll('.word-reveal');
+          words.forEach(function (word, i) {
+            setTimeout(function () {
+              word.classList.add('revealed');
+            }, i * 100);
+          });
+          observer.unobserve(entry.target);
+        }
+      });
+    }, {
+      threshold: 0.2,
+      rootMargin: '0px 0px -40px 0px'
+    });
+
+    titles.forEach(function (title) {
+      observer.observe(title);
+    });
+  }
+
   // --- Scroll Reveal (Staggered) ---
   function initScrollReveal() {
     var revealElements = document.querySelectorAll('.reveal');
@@ -1409,6 +1459,7 @@
   }
 
   function initMain() {
+    initTextReveal();
     initScrollReveal();
     initScrollHero();
     initScrollProgress();
