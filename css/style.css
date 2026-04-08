@@ -195,6 +195,30 @@ a:hover { color: var(--hot-pink); }
   -webkit-text-fill-color: transparent;
 }
 
+/* --- Chrome / Metallic Text --- */
+.chrome-text {
+  background: linear-gradient(180deg, #e8e8e8 0%, #b0b0b0 25%, #e0e0e0 50%, #a8a8a8 75%, #d0d0d0 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.15));
+}
+
+/* --- Holographic / Iridescent Shimmer --- */
+@keyframes holo-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.holo-border {
+  border-image: linear-gradient(90deg,
+    var(--hot-pink), var(--purple), var(--deep-blue),
+    var(--sky-blue), var(--purple), var(--hot-pink)) 1;
+  animation: holo-shift 4s ease infinite;
+  background-size: 200% 200%;
+}
+
 /* ===================== INTRO OVERLAY ===================== */
 .intro-overlay {
   position: fixed;
@@ -341,7 +365,9 @@ body.intro-active { overflow: hidden; }
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border-bottom: 3px solid;
-  border-image: linear-gradient(90deg, var(--hot-pink), var(--purple), var(--deep-blue)) 1;
+  border-image: linear-gradient(90deg,
+    var(--hot-pink), var(--purple), var(--deep-blue),
+    var(--sky-blue), var(--purple), var(--hot-pink)) 1;
   box-shadow: 0 2px 16px rgba(153, 102, 255, 0.1);
 }
 
@@ -439,11 +465,49 @@ body.intro-active { overflow: hidden; }
   justify-content: center;
   overflow: hidden;
   background:
-    radial-gradient(ellipse at 20% 50%, rgba(255, 105, 180, 0.12) 0%, transparent 60%),
-    radial-gradient(ellipse at 80% 30%, rgba(0, 191, 255, 0.1) 0%, transparent 60%),
-    radial-gradient(ellipse at 50% 80%, rgba(153, 102, 255, 0.08) 0%, transparent 60%),
-    linear-gradient(180deg, #fff8fc 0%, #f5f0ff 50%, #eef6ff 100%);
+    radial-gradient(ellipse at 20% 50%, rgba(255, 105, 180, 0.18) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 30%, rgba(0, 191, 255, 0.15) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 80%, rgba(153, 102, 255, 0.12) 0%, transparent 50%),
+    radial-gradient(circle at 10% 20%, rgba(255, 182, 255, 0.2) 0%, transparent 30%),
+    radial-gradient(circle at 90% 80%, rgba(135, 206, 250, 0.2) 0%, transparent 30%),
+    linear-gradient(180deg, #fff5fa 0%, #f0eaff 40%, #e6f2ff 100%);
   padding-top: var(--nav-height);
+}
+
+/* Glossy floating orbs in hero */
+.hero::before,
+.hero::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.hero::before {
+  width: 300px;
+  height: 300px;
+  top: 10%;
+  left: -5%;
+  background: radial-gradient(circle at 35% 35%,
+    rgba(255, 182, 255, 0.35),
+    rgba(255, 105, 180, 0.15) 40%,
+    transparent 70%);
+  filter: blur(40px);
+  animation: float-orb 12s ease-in-out infinite;
+}
+
+.hero::after {
+  width: 250px;
+  height: 250px;
+  bottom: 15%;
+  right: -3%;
+  background: radial-gradient(circle at 65% 35%,
+    rgba(135, 206, 250, 0.35),
+    rgba(0, 191, 255, 0.15) 40%,
+    transparent 70%);
+  filter: blur(35px);
+  animation: float-orb 15s ease-in-out infinite reverse;
 }
 
 .hero-particles {
@@ -514,12 +578,58 @@ body.intro-active { overflow: hidden; }
 .section {
   padding: 100px 0;
   position: relative;
+  overflow: hidden;
+}
+
+/* Floating star decorations on sections */
+.section::before,
+.section::after {
+  position: absolute;
+  pointer-events: none;
+  font-size: 1.4rem;
+  opacity: 0.2;
+  z-index: 0;
+}
+
+.section:nth-child(odd)::before {
+  content: '✦';
+  top: 60px;
+  left: 8%;
+  color: var(--hot-pink);
+  animation: twinkle 4s ease-in-out infinite;
+}
+
+.section:nth-child(odd)::after {
+  content: '★';
+  bottom: 80px;
+  right: 10%;
+  color: var(--purple);
+  animation: twinkle 5s ease-in-out infinite 1s;
+}
+
+.section:nth-child(even)::before {
+  content: '♡';
+  top: 50px;
+  right: 6%;
+  color: var(--hot-pink);
+  animation: twinkle 3.5s ease-in-out infinite 0.5s;
+}
+
+.section:nth-child(even)::after {
+  content: '✧';
+  bottom: 60px;
+  left: 12%;
+  color: var(--deep-blue);
+  animation: twinkle 4.5s ease-in-out infinite 1.5s;
 }
 
 .section-alt {
-  background: linear-gradient(180deg,
-    rgba(240, 232, 255, 0.5) 0%,
-    rgba(232, 244, 255, 0.4) 100%);
+  background:
+    radial-gradient(ellipse at 15% 50%, rgba(255, 105, 180, 0.06) 0%, transparent 40%),
+    radial-gradient(ellipse at 85% 50%, rgba(0, 191, 255, 0.06) 0%, transparent 40%),
+    linear-gradient(180deg,
+      rgba(240, 232, 255, 0.6) 0%,
+      rgba(232, 244, 255, 0.5) 100%);
 }
 
 .section-title {
@@ -726,40 +836,66 @@ a, button, .nav-toggle, .faq-question, .category-card,
 
 .category-card {
   padding: 28px 24px;
-  background: rgba(255, 255, 255, 0.8) !important;
+  background: rgba(255, 255, 255, 0.85) !important;
   backdrop-filter: blur(12px);
   border: 2px solid rgba(255, 105, 180, 0.25) !important;
   border-radius: var(--radius) !important;
-  transition: all 0.3s;
+  transition: all 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   box-shadow:
     0 4px 16px rgba(153, 102, 255, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    0 1px 3px rgba(0, 0, 0, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
   position: relative;
   overflow: hidden;
 }
 
+/* Glossy shine overlay */
 .category-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(120deg, transparent 30%, rgba(255, 255, 255, 0.4) 50%, transparent 70%);
+  transition: left 0.6s ease;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Iridescent top border */
+.category-card::after {
   content: '';
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   height: 3px;
-  background: linear-gradient(90deg, var(--hot-pink), var(--purple), var(--deep-blue));
+  background: linear-gradient(90deg,
+    var(--hot-pink), var(--purple), var(--deep-blue),
+    var(--hot-pink), var(--purple));
+  background-size: 200% 100%;
   opacity: 0;
   transition: opacity 0.3s;
+  animation: shimmer 3s linear infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
 .category-card:hover {
-  transform: translateY(-6px);
+  transform: translateY(-8px) scale(1.02);
   box-shadow:
-    0 12px 36px rgba(255, 20, 147, 0.2),
-    0 4px 12px rgba(153, 102, 255, 0.12),
-    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    0 16px 40px rgba(255, 20, 147, 0.25),
+    0 6px 16px rgba(153, 102, 255, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
   border-color: var(--hot-pink) !important;
 }
 
-.category-card:hover::before { opacity: 1; }
+.category-card:hover::before { left: 100%; }
+.category-card:hover::after { opacity: 1; }
 
 .category-icon {
   font-size: 2.2rem;
@@ -797,10 +933,30 @@ a, button, .nav-toggle, .faq-question, .category-card,
 
 .req-card {
   padding: 28px 24px;
-  background: rgba(255, 255, 255, 0.75) !important;
+  background: rgba(255, 255, 255, 0.8) !important;
   backdrop-filter: blur(12px);
   border: 2px solid rgba(255, 255, 255, 0.7) !important;
   box-shadow: var(--shadow-glossy), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.req-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.4), transparent);
+  pointer-events: none;
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+
+.req-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 36px rgba(255, 105, 180, 0.18), 0 4px 12px rgba(0, 0, 0, 0.06);
 }
 
 .req-title {
@@ -1235,7 +1391,12 @@ a, button, .nav-toggle, .faq-question, .category-card,
   border-radius: var(--radius) !important;
   box-shadow: var(--shadow-soft);
   overflow: hidden;
-  transition: box-shadow 0.3s;
+  transition: box-shadow 0.3s, transform 0.3s, border-color 0.3s;
+}
+
+.faq-item:hover {
+  transform: translateX(4px);
+  border-color: rgba(255, 105, 180, 0.3) !important;
 }
 
 .faq-item[open] {
@@ -1278,10 +1439,31 @@ a, button, .nav-toggle, .faq-question, .category-card,
 /* ===================== FOOTER ===================== */
 .footer {
   padding: 56px 0 36px;
-  background: linear-gradient(180deg, rgba(240, 232, 255, 0.5), rgba(255, 245, 250, 0.5));
+  background:
+    radial-gradient(ellipse at 30% 50%, rgba(255, 105, 180, 0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at 70% 50%, rgba(153, 102, 255, 0.06) 0%, transparent 50%),
+    linear-gradient(180deg, rgba(240, 232, 255, 0.5), rgba(255, 245, 250, 0.5));
   border-top: 3px solid;
-  border-image: linear-gradient(90deg, var(--hot-pink), var(--purple), var(--deep-blue)) 1;
+  border-image: linear-gradient(90deg,
+    var(--hot-pink), var(--purple), var(--deep-blue),
+    var(--sky-blue), var(--purple), var(--hot-pink)) 1;
   text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.footer::before {
+  content: '✦ ★ ✧ ♡ ✦';
+  position: absolute;
+  top: 20px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 0.8rem;
+  letter-spacing: 24px;
+  color: var(--hot-pink);
+  opacity: 0.15;
+  pointer-events: none;
 }
 
 .footer-brand .logo-text { font-size: 1.5rem; }
