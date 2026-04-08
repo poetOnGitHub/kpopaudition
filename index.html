@@ -9,11 +9,12 @@
   <meta property="og:description" content="Are you ready to be found? We're looking for connection.">
   <meta property="og:type" content="website">
   <meta name="theme-color" content="#e8dff5">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src https://fonts.gstatic.com; connect-src https://formspree.io; img-src 'self' data:;">
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=7">
+  <link rel="stylesheet" href="css/style.css?v=8">
   <noscript><style>.reveal { opacity: 1 !important; transform: none !important; }</style></noscript>
 </head>
 <body>
@@ -317,7 +318,9 @@
     <div class="container">
       <h2 class="section-title gradient-text">Send your signal.</h2>
       <p class="section-subtitle reveal"><em>"Not everyone will understand this. But maybe you do."</em></p>
-      <form class="application-form glass reveal" id="applicationForm" action="https://formspree.io/f/YOUR_FORM_ID" method="POST" novalidate>
+      <form class="application-form glass reveal" id="applicationForm" action="https://formspree.io/f/YOUR_FORM_ID" method="POST">
+        <!-- Honeypot for spam protection -->
+        <input type="text" name="_gotcha" style="display:none" tabindex="-1" autocomplete="off">
         <div class="form-grid">
           <div class="form-group">
             <label for="fullName" class="form-label">Full Name <span class="required">*</span></label>
@@ -561,6 +564,6 @@
   </footer>
   <!-- connection established // chatroom v0.7.1 // not everyone will understand this -->
 
-  <script src="js/main.js?v=7"></script>
+  <script src="js/main.js?v=8"></script>
 </body>
 </html>

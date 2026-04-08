@@ -11,24 +11,26 @@
     if (!titles.length) return;
 
     titles.forEach(function (title) {
-      // Store original HTML, split into words while preserving <br> tags
-      var html = title.innerHTML;
-      // Split on whitespace but keep <br> tags
-      var parts = html.split(/(<br\s*\/?>)/gi);
-      var wrapped = '';
+      // Build word-reveal spans using DOM APIs (no innerHTML for security)
+      var childNodes = Array.prototype.slice.call(title.childNodes);
+      title.textContent = '';
 
-      parts.forEach(function (part) {
-        if (/^<br/i.test(part)) {
-          wrapped += part;
+      childNodes.forEach(function (node) {
+        if (node.nodeType === 1 && node.tagName === 'BR') {
+          title.appendChild(document.createElement('br'));
         } else {
-          var words = part.split(/\s+/).filter(function (w) { return w.length > 0; });
-          words.forEach(function (word) {
-            wrapped += '<span class="word-reveal">' + word + '</span> ';
+          var text = node.textContent || '';
+          var words = text.split(/\s+/).filter(function (w) { return w.length > 0; });
+          words.forEach(function (word, i) {
+            var span = document.createElement('span');
+            span.className = 'word-reveal';
+            span.textContent = word;
+            title.appendChild(span);
+            if (i < words.length - 1) title.appendChild(document.createTextNode(' '));
           });
         }
       });
 
-      title.innerHTML = wrapped;
       title.classList.add('text-reveal-ready');
     });
 
@@ -472,10 +474,24 @@
         msg = 'You must agree to continue.';
       } else if (input.required && input.type === 'file' && (!input.files || input.files.length === 0)) {
         msg = 'Please upload a photo.';
-      } else if (input.type === 'email' && input.value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.value)) {
+      } else if (input.type === 'file' && input.files && input.files.length > 0) {
+        var file = input.files[0];
+        var allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+        var maxSize = 10 * 1024 * 1024;
+        if (allowedTypes.indexOf(file.type) === -1) {
+          msg = 'Only JPG, PNG, or WebP images are allowed.';
+        } else if (file.size > maxSize) {
+          msg = 'File must be under 10MB.';
+        }
+      } else if (input.type === 'email' && input.value && !/^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/.test(input.value)) {
         msg = 'Please enter a valid email.';
-      } else if (input.type === 'url' && input.value && !/^https?:\/\/.+/i.test(input.value)) {
-        msg = 'Please enter a valid URL (https://...)';
+      } else if (input.type === 'url' && input.value && !/^https:\/\/(www\.)?(youtube\.com|youtu\.be|drive\.google\.com)\/.+/i.test(input.value)) {
+        msg = 'Please use a YouTube or Google Drive link (https://...)';
+      } else if (input.id === 'dob' && input.value) {
+        var dob = new Date(input.value);
+        if (dob < new Date('2005-01-01')) {
+          msg = 'You must be born in 2005 or later.';
+        }
       }
 
       if (msg) {
@@ -692,7 +708,7 @@
         osc.start();
         osc.stop(audioCtx.currentTime + duration);
       } catch (e) {
-        console.warn('playTone error:', e);
+        // audio error, silently ignore
       }
     }
 
@@ -1362,7 +1378,7 @@
 
     // --- User Input Handler ---
     function sendUserMessage() {
-      var text = input.value.trim();
+      var text = input.value.trim().substring(0, 120);
       if (!text || isTyping) return;
       input.value = '';
 
