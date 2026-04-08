@@ -639,6 +639,211 @@
     });
   }
 
+  // --- Interactive Chatroom ---
+  function initChatroom() {
+    var body = document.getElementById('chatroomBody');
+    var input = document.getElementById('chatroomInput');
+    var sendBtn = document.getElementById('chatroomSend');
+    if (!body) return;
+
+    var cities = [
+      'Seoul', 'Tokyo', 'London', 'Paris', 'Lagos', 'New York',
+      'Bangkok', 'Jakarta', 'Berlin', 'Mumbai', 'Manila', 'Sydney',
+      'Toronto', 'Stockholm', 'Cairo', 'Mexico City', 'Osaka',
+      'Amsterdam', 'Dubai', 'Taipei', 'Singapore', 'Lisbon'
+    ];
+
+    var userMessages = [
+      'hello? is anyone here?',
+      'i can hear you.',
+      'how did i get here?',
+      'wait... is this real?',
+      'can anyone see this?',
+      'i found the link at 3am and i just clicked',
+      'this feels different from other auditions',
+      'where is everyone from?',
+      'i think i was meant to find this',
+      'my heart is racing right now',
+      'hi from the other side of the world',
+      'something told me to click that link',
+      'is anyone else nervous?',
+      'i have been looking for something like this',
+      'the music brought me here',
+      'i just want to be heard',
+      'this chatroom feels alive',
+      'are we really doing this?',
+      'i practiced all night for this',
+      'what if this changes everything?',
+      'i almost closed the tab but something stopped me',
+      'the vibes here are unreal',
+      'sending good energy to everyone',
+      'we are all here for a reason right?',
+      'i showed my friend and she is applying too',
+      'been dreaming about this since i was 12'
+    ];
+
+    var systemResponses = [
+      '[SYSTEM] Your signal has been detected.',
+      '[SYSTEM] Connection strength: strong.',
+      '[SYSTEM] Message logged and stored.',
+      '[SYSTEM] We see you.',
+      '[SYSTEM] Signal received from your location.',
+      '[SYSTEM] You are being heard.',
+      '[SYSTEM] Frequency match: analyzing...',
+      '[SYSTEM] Stay connected. Stay ready.',
+      '[SYSTEM] Your voice matters here.',
+      '[SYSTEM] The room is listening.',
+      '[SYSTEM] Signal noted. Stand by.',
+      '[SYSTEM] Connection verified.',
+      '[SYSTEM] You belong here.'
+    ];
+
+    var userClasses = ['user-1', 'user-2', 'user-3'];
+    var usedCities = [];
+    var isTyping = false;
+    var messageQueue = [];
+    var chatStarted = false;
+    var autoInterval = null;
+
+    function pickRandom(arr) {
+      return arr[Math.floor(Math.random() * arr.length)];
+    }
+
+    function pickCity() {
+      var available = cities.filter(function (c) { return usedCities.indexOf(c) === -1; });
+      if (available.length === 0) { usedCities = []; available = cities; }
+      var city = pickRandom(available);
+      usedCities.push(city);
+      return city;
+    }
+
+    function scrollChat() {
+      body.scrollTop = body.scrollHeight;
+    }
+
+    // Type text character by character into an element
+    function typeText(el, text, speed, callback) {
+      var i = 0;
+      function tick() {
+        if (i < text.length) {
+          el.textContent += text.charAt(i);
+          i++;
+          scrollChat();
+          setTimeout(tick, speed + (Math.random() * speed * 0.5));
+        } else if (callback) {
+          callback();
+        }
+      }
+      tick();
+    }
+
+    // Add and type a message
+    function addMessage(text, cssClass, typingSpeed, callback) {
+      var p = document.createElement('p');
+      p.className = 'chat-msg ' + cssClass;
+      body.appendChild(p);
+      scrollChat();
+      isTyping = true;
+      typeText(p, text, typingSpeed, function () {
+        isTyping = false;
+        if (callback) callback();
+        processQueue();
+      });
+    }
+
+    function queueMessage(text, cssClass, typingSpeed, delay) {
+      messageQueue.push({ text: text, cssClass: cssClass, speed: typingSpeed, delay: delay || 0 });
+      if (!isTyping) processQueue();
+    }
+
+    function processQueue() {
+      if (isTyping || messageQueue.length === 0) return;
+      var msg = messageQueue.shift();
+      setTimeout(function () {
+        addMessage(msg.text, msg.cssClass, msg.speed);
+      }, msg.delay);
+    }
+
+    // Generate a random "someone connected + says something" pair
+    function generateRandomExchange() {
+      var city = pickCity();
+      var userClass = pickRandom(userClasses);
+      var userMsg = pickRandom(userMessages);
+
+      queueMessage('[SYSTEM] User connected from ' + city + '.', 'system', 18, 400);
+      queueMessage(userMsg, userClass, 30, 800);
+    }
+
+    // Initial boot sequence for the chatroom
+    function startChatSequence() {
+      if (chatStarted) return;
+      chatStarted = true;
+
+      var slotsLeft = 3 + Math.floor(Math.random() * 3); // 3-5
+
+      queueMessage('[SYSTEM] Room initialized.', 'system', 18, 0);
+      queueMessage('[SYSTEM] Waiting for connections...', 'system', 18, 600);
+
+      // First few connections
+      setTimeout(function () { generateRandomExchange(); }, 2500);
+      setTimeout(function () { generateRandomExchange(); }, 5500);
+      setTimeout(function () { generateRandomExchange(); }, 9000);
+
+      // Slots remaining
+      setTimeout(function () {
+        queueMessage('[SYSTEM] ' + slotsLeft + ' of 7 slots remaining...', 'system', 18, 400);
+      }, 12000);
+
+      // Keep generating random messages periodically
+      autoInterval = setInterval(function () {
+        if (!isTyping && messageQueue.length === 0) {
+          generateRandomExchange();
+        }
+      }, 8000 + Math.random() * 6000);
+    }
+
+    // Interactive: user sends a message
+    function sendUserMessage() {
+      var text = input.value.trim();
+      if (!text || isTyping) return;
+      input.value = '';
+
+      // Show user message
+      queueMessage('you: ' + text, 'user-you', 12, 0);
+
+      // System responds after a delay
+      setTimeout(function () {
+        queueMessage(pickRandom(systemResponses), 'system', 18, 300);
+      }, 800);
+    }
+
+    if (input) {
+      input.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          sendUserMessage();
+        }
+      });
+    }
+
+    if (sendBtn) {
+      sendBtn.addEventListener('click', function () {
+        sendUserMessage();
+        input.focus();
+      });
+    }
+
+    // Start typing when chatroom scrolls into view
+    var chatObserver = new IntersectionObserver(function (entries) {
+      if (entries[0].isIntersecting) {
+        chatObserver.disconnect();
+        startChatSequence();
+      }
+    }, { threshold: 0.3 });
+
+    chatObserver.observe(body);
+  }
+
   function initMain() {
     initScrollReveal();
     initNavbar();
@@ -647,6 +852,7 @@
     initParticles();
     initFormValidation();
     initLoreEffects();
+    initChatroom();
   }
 
   // --- Initialize ---

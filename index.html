@@ -141,17 +141,12 @@
                 <span class="win-btn close">×</span>
               </div>
             </div>
-            <div class="chatroom-body mono">
-              <p class="chat-msg system">[SYSTEM] Room initialized.</p>
-              <p class="chat-msg system">[SYSTEM] Waiting for connections...</p>
-              <p class="chat-msg user-1">hello? is anyone here?</p>
-              <p class="chat-msg system">[SYSTEM] User connected from Seoul.</p>
-              <p class="chat-msg user-2">i can hear you.</p>
-              <p class="chat-msg system">[SYSTEM] User connected from London.</p>
-              <p class="chat-msg user-3">how did i get here?</p>
-              <p class="chat-msg system">[SYSTEM] User connected from Tokyo.</p>
-              <p class="chat-msg system">[SYSTEM] 4 slots remaining...</p>
-              <p class="chat-msg system blink">[SYSTEM] Searching for signal_<span class="cursor">|</span></p>
+            <div class="chatroom-body mono" id="chatroomBody">
+              <!-- Messages typed in by JS -->
+            </div>
+            <div class="chatroom-input-bar">
+              <input type="text" id="chatroomInput" class="chatroom-input mono" placeholder="type a message..." autocomplete="off" maxlength="120">
+              <button id="chatroomSend" class="chatroom-send mono">Send</button>
             </div>
           </div>
         </div>
