@@ -164,7 +164,7 @@ a:hover { color: var(--hot-pink); }
   pointer-events: none;
   z-index: 0;
   opacity: 0.3;
-  animation: twinkle 6s ease-in-out infinite;
+  animation: twinkle 20s ease-in-out infinite;
 }
 
 .deco-orb {
@@ -177,8 +177,8 @@ a:hover { color: var(--hot-pink); }
 }
 
 @keyframes twinkle {
-  0%, 100% { opacity: 0.15; }
-  50% { opacity: 0.45; }
+  0%, 100% { opacity: 0.1; }
+  50% { opacity: 0.3; }
 }
 
 @keyframes float-orb {
@@ -322,7 +322,7 @@ body.intro-active { overflow: hidden; }
   background: var(--hot-pink);
   border-radius: 50%;
   box-shadow: 0 0 8px var(--hot-pink);
-  animation: twinkle 5s ease-in-out infinite;
+  animation: twinkle 18s ease-in-out infinite;
   animation-delay: var(--delay);
 }
 
@@ -596,7 +596,7 @@ body.intro-active { overflow: hidden; }
   top: 60px;
   left: 8%;
   color: var(--hot-pink);
-  animation: twinkle 4s ease-in-out infinite;
+  animation: twinkle 18s ease-in-out infinite;
 }
 
 .section:nth-child(odd)::after {
@@ -604,7 +604,7 @@ body.intro-active { overflow: hidden; }
   bottom: 80px;
   right: 10%;
   color: var(--purple);
-  animation: twinkle 5s ease-in-out infinite 1s;
+  animation: twinkle 22s ease-in-out infinite 3s;
 }
 
 .section:nth-child(even)::before {
@@ -612,7 +612,7 @@ body.intro-active { overflow: hidden; }
   top: 50px;
   right: 6%;
   color: var(--hot-pink);
-  animation: twinkle 3.5s ease-in-out infinite 0.5s;
+  animation: twinkle 20s ease-in-out infinite 5s;
 }
 
 .section:nth-child(even)::after {
@@ -620,7 +620,7 @@ body.intro-active { overflow: hidden; }
   bottom: 60px;
   left: 12%;
   color: var(--deep-blue);
-  animation: twinkle 4.5s ease-in-out infinite 1.5s;
+  animation: twinkle 24s ease-in-out infinite 8s;
 }
 
 .section-alt {
@@ -1560,7 +1560,7 @@ a, button, .nav-toggle, .faq-question, .category-card,
 .marquee-track {
   display: flex;
   width: max-content;
-  animation: marquee-scroll 45s linear infinite;
+  animation: marquee-scroll 90s linear infinite;
 }
 
 .marquee-track span {
