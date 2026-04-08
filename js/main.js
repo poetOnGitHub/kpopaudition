@@ -136,6 +136,7 @@
   // --- Parallax Depth on Sections ---
   function initParallax() {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (window.matchMedia('(pointer: coarse)').matches) return;
 
     var parallaxEls = document.querySelectorAll('.section-title, .chatroom-window, .step-number');
     if (!parallaxEls.length) return;
@@ -163,6 +164,7 @@
   // --- Magnetic Buttons ---
   function initMagneticButtons() {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (window.matchMedia('(pointer: coarse)').matches) return;
 
     var buttons = document.querySelectorAll('.btn-glossy, .btn-submit, .nav-links a');
     buttons.forEach(function (btn) {
@@ -1398,6 +1400,7 @@
   // --- Cursor Sparkle Trail ---
   function initSparkleTrail() {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (window.matchMedia('(pointer: coarse)').matches) return;
     var sparkles = [];
     var maxSparkles = 20;
     var throttle = 0;
@@ -1438,6 +1441,7 @@
   // --- 3D Perspective Tilt on Cards ---
   function initCardTilt() {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (window.matchMedia('(pointer: coarse)').matches) return;
     var cards = document.querySelectorAll('.category-card');
 
     cards.forEach(function (card) {
