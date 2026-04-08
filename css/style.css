@@ -586,8 +586,8 @@ body.intro-active { overflow: hidden; }
 .section::after {
   position: absolute;
   pointer-events: none;
-  font-size: 1.4rem;
-  opacity: 0.2;
+  font-size: 1.6rem;
+  opacity: 0.35;
   z-index: 0;
 }
 
@@ -1536,6 +1536,94 @@ a, button, .nav-toggle, .faq-question, .category-card,
   60% { transform: translate(-1px, -1px); filter: hue-rotate(180deg); }
   80% { transform: translate(1px, 2px); filter: hue-rotate(-60deg); }
   100% { transform: translate(0); filter: hue-rotate(0deg); }
+}
+
+/* ===================== SPARKLE TRAIL ===================== */
+.sparkle-trail {
+  position: absolute;
+  pointer-events: none;
+  z-index: 9998;
+  opacity: 0.8;
+  transition: opacity 0.6s ease, transform 0.6s ease;
+  text-shadow: 0 0 6px currentColor;
+}
+
+/* ===================== MARQUEE TICKER ===================== */
+.marquee-wrap {
+  overflow: hidden;
+  background: linear-gradient(90deg, var(--hot-pink), var(--purple), var(--deep-blue));
+  padding: 10px 0;
+  position: relative;
+  z-index: 2;
+}
+
+.marquee-track {
+  display: flex;
+  width: max-content;
+  animation: marquee-scroll 20s linear infinite;
+}
+
+.marquee-track span {
+  color: white;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  padding: 0 40px;
+}
+
+.marquee-track .marquee-star {
+  color: rgba(255, 255, 255, 0.5);
+  padding: 0 12px;
+  font-size: 0.6rem;
+}
+
+@keyframes marquee-scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+/* ===================== ANIMATED HERO GRADIENT ===================== */
+.hero-gradient-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: linear-gradient(
+    -45deg,
+    rgba(255, 182, 255, 0.15),
+    rgba(135, 206, 250, 0.15),
+    rgba(255, 105, 180, 0.12),
+    rgba(153, 102, 255, 0.12),
+    rgba(0, 191, 255, 0.12),
+    rgba(255, 182, 255, 0.15)
+  );
+  background-size: 400% 400%;
+  animation: hero-gradient-shift 12s ease infinite;
+}
+
+@keyframes hero-gradient-shift {
+  0% { background-position: 0% 50%; }
+  25% { background-position: 100% 25%; }
+  50% { background-position: 100% 50%; }
+  75% { background-position: 0% 75%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* ===================== SECTION DIVIDERS ===================== */
+.section-divider {
+  text-align: center;
+  padding: 0;
+  margin: -30px 0;
+  position: relative;
+  z-index: 2;
+  font-size: 1rem;
+  letter-spacing: 16px;
+  color: var(--hot-pink);
+  opacity: 0.25;
+  pointer-events: none;
+  line-height: 1;
 }
 
 /* ===================== RESPONSIVE ===================== */

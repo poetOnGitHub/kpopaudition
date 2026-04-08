@@ -1224,6 +1224,69 @@
     chatObserver.observe(body);
   }
 
+  // --- Cursor Sparkle Trail ---
+  function initSparkleTrail() {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    var sparkles = [];
+    var maxSparkles = 20;
+    var throttle = 0;
+    var chars = ['✦', '★', '✧', '♡', '·'];
+    var colors = ['#ff69b4', '#ff1493', '#9966ff', '#00bfff', '#c9a0dc'];
+
+    document.addEventListener('mousemove', function (e) {
+      if (Date.now() - throttle < 50) return;
+      throttle = Date.now();
+
+      var spark = document.createElement('span');
+      spark.className = 'sparkle-trail';
+      spark.textContent = chars[Math.floor(Math.random() * chars.length)];
+      spark.style.left = e.pageX + 'px';
+      spark.style.top = e.pageY + 'px';
+      spark.style.color = colors[Math.floor(Math.random() * colors.length)];
+      spark.style.fontSize = (8 + Math.random() * 10) + 'px';
+      document.body.appendChild(spark);
+      sparkles.push(spark);
+
+      if (sparkles.length > maxSparkles) {
+        var old = sparkles.shift();
+        if (old.parentNode) old.parentNode.removeChild(old);
+      }
+
+      setTimeout(function () {
+        spark.style.opacity = '0';
+        spark.style.transform = 'translateY(-20px) scale(0) rotate(' + (Math.random() * 180 - 90) + 'deg)';
+        setTimeout(function () {
+          if (spark.parentNode) spark.parentNode.removeChild(spark);
+          var idx = sparkles.indexOf(spark);
+          if (idx > -1) sparkles.splice(idx, 1);
+        }, 600);
+      }, 100);
+    });
+  }
+
+  // --- 3D Perspective Tilt on Cards ---
+  function initCardTilt() {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    var cards = document.querySelectorAll('.category-card');
+
+    cards.forEach(function (card) {
+      card.addEventListener('mousemove', function (e) {
+        var rect = card.getBoundingClientRect();
+        var x = e.clientX - rect.left;
+        var y = e.clientY - rect.top;
+        var centerX = rect.width / 2;
+        var centerY = rect.height / 2;
+        var rotateX = (y - centerY) / centerY * -8;
+        var rotateY = (x - centerX) / centerX * 8;
+        card.style.transform = 'perspective(600px) rotateX(' + rotateX + 'deg) rotateY(' + rotateY + 'deg) translateY(-8px) scale(1.02)';
+      });
+
+      card.addEventListener('mouseleave', function () {
+        card.style.transform = '';
+      });
+    });
+  }
+
   function initMain() {
     initScrollReveal();
     initNavbar();
@@ -1233,6 +1296,8 @@
     initFormValidation();
     initLoreEffects();
     initChatroom();
+    initSparkleTrail();
+    initCardTilt();
   }
 
   // --- Initialize ---
