@@ -15,7 +15,7 @@
   <meta property="og:description" content="Open global audition for a new K-pop girl group. 7 girls, 7 countries, 1 room. No experience needed. Apply now.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://7throom.com/">
-  <meta property="og:image" content="https://7throom.com/assets/og-image.png">
+  <meta property="og:image" content="https://7throom.com/assets/og-image.svg">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta property="og:image:alt" content="7th Room - Global K-Pop Girl Group Audition">
@@ -26,7 +26,7 @@
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="7th Room | Global K-Pop Girl Group Audition 2026">
   <meta name="twitter:description" content="Open global audition for a new K-pop girl group. 7 girls, 7 countries, 1 room. Apply now.">
-  <meta name="twitter:image" content="https://7throom.com/assets/og-image.png">
+  <meta name="twitter:image" content="https://7throom.com/assets/og-image.svg">
 
   <meta name="theme-color" content="#e8dff5">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -39,7 +39,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;700&family=Space+Mono:wght@700&display=swap" onload="this.rel='stylesheet'">
   <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;700&family=Space+Mono:wght@700&display=swap"></noscript>
-  <link rel="stylesheet" href="css/style.css?v=12">
+  <link rel="stylesheet" href="css/style.css?v=13">
   <noscript><style>.reveal { opacity: 1 !important; transform: none !important; }</style></noscript>
   <!-- Structured Data -->
   <script type="application/ld+json">
@@ -48,6 +48,8 @@
     "@type": "Event",
     "name": "7th Room Global K-Pop Girl Group Audition",
     "description": "Open global audition for a new K-pop girl group. 7 girls from 7 countries, 1 digital chatroom. No prior training required. Vocal, dance, rap, visual, songwriting, all-rounder categories.",
+    "startDate": "2026-04-01",
+    "endDate": "2026-12-31",
     "eventAttendanceMode": "https://schema.org/OnlineEventAttendanceMode",
     "eventStatus": "https://schema.org/EventScheduled",
     "location": {
@@ -119,7 +121,7 @@
 <body>
 
   <!-- Cinematic Chatroom Intro -->
-  <div class="intro-overlay" id="introOverlay" role="dialog" aria-label="Welcome to 7th Room">
+  <div class="intro-overlay" id="introOverlay" role="dialog" aria-modal="true" aria-label="Welcome to 7th Room">
     <div class="intro-screen">
       <div class="intro-scanlines" aria-hidden="true"></div>
       <div class="intro-terminal">
@@ -223,7 +225,7 @@
   </div>
 
   <!-- About Section -->
-  <section class="section" id="about">
+  <section class="section deco-a" id="about">
     <div class="container">
       <div class="about-grid">
         <div class="about-content reveal">
@@ -265,6 +267,7 @@
             </div>
             <div class="chatroom-input-bar">
               <input type="text" id="chatroomInput" class="chatroom-input mono" placeholder="type a message..." autocomplete="off" maxlength="120" enterkeyhint="send">
+              <span id="chatCharCount" class="chat-char-count mono"></span>
               <button id="chatroomSend" class="chatroom-send mono">Send</button>
             </div>
           </div>
@@ -276,7 +279,7 @@
   <div class="section-divider" aria-hidden="true">✦ ★ ✧ ♡ ✦ ★ ✧ ♡ ✦</div>
 
   <!-- Audition Categories -->
-  <section class="section section-alt" id="audition">
+  <section class="section section-alt deco-b" id="audition">
     <div class="container">
       <h2 class="section-title gradient-text">Find your frequency.</h2>
       <p class="section-subtitle reveal">Every voice matters. Every story counts. Choose the path that feels like yours.</p>
@@ -324,7 +327,7 @@
   <div class="section-divider" aria-hidden="true">★ ✧ ♡ ✦ ★ ✧ ♡ ✦ ★</div>
 
   <!-- Requirements Section -->
-  <section class="section" id="requirements">
+  <section class="section deco-a" id="requirements">
     <div class="container">
       <h2 class="section-title gradient-text">Before you begin.</h2>
       <div class="requirements-grid">
@@ -362,7 +365,7 @@
   <div class="section-divider" aria-hidden="true">✧ ♡ ✦ ★ ✧ ♡ ✦ ★ ✧</div>
 
   <!-- Process / Timeline -->
-  <section class="section section-alt" id="process">
+  <section class="section section-alt deco-b" id="process">
     <div class="container">
       <h2 class="section-title gradient-text">The process.</h2>
       <p class="section-subtitle reveal">From signal to connection. Here's how it works.</p>
@@ -413,7 +416,7 @@
   <div class="section-divider" aria-hidden="true">♡ ✦ ★ ✧ ♡ ✦ ★ ✧ ♡</div>
 
   <!-- Application Form -->
-  <section class="section" id="apply">
+  <section class="section deco-a" id="apply">
     <div class="container">
       <h2 class="section-title gradient-text">Send your signal.</h2>
       <p class="section-subtitle reveal"><em>"Not everyone will understand this. But maybe you do."</em></p>
@@ -428,7 +431,7 @@
           </div>
           <div class="form-group">
             <label for="dob" class="form-label">Date of Birth <span class="required">*</span></label>
-            <input type="date" id="dob" name="dateOfBirth" class="form-input" required min="2005-01-01">
+            <input type="date" id="dob" name="dateOfBirth" class="form-input" required min="2005-01-01" max="2026-12-31">
             <span class="form-error" aria-live="polite"></span>
           </div>
           <div class="form-group">
@@ -501,9 +504,9 @@
             <span class="form-error" aria-live="polite"></span>
           </div>
           <div class="form-group full-width">
-            <label for="photo" class="form-label">Recent Photo <span class="required">*</span></label>
+            <label for="photo" class="form-label">Recent Photo <span class="optional">(optional, requested later)</span></label>
             <div class="file-upload" id="fileUpload">
-              <input type="file" id="photo" name="photo" class="file-input" required accept="image/*">
+              <input type="file" id="photo" name="photo" class="file-input" accept="image/jpeg,image/png,image/webp">
               <div class="file-upload-label">
                 <span class="file-upload-icon">↑</span>
                 <span class="file-upload-text">Drop your photo here or click to browse</span>
@@ -562,7 +565,7 @@
   <div class="section-divider" aria-hidden="true">✦ ★ ✧ ♡ ✦ ★ ✧ ♡ ✦</div>
 
   <!-- FAQ Section -->
-  <section class="section section-alt" id="faq">
+  <section class="section section-alt deco-b" id="faq">
     <div class="container">
       <h2 class="section-title gradient-text">Frequently asked.</h2>
       <div class="faq-list">
@@ -651,10 +654,10 @@
           <p class="footer-tagline mono">"Not everyone will understand this."</p>
         </div>
         <div class="footer-links">
-          <span class="social-link">Instagram</span>
-          <span class="social-link">TikTok</span>
-          <span class="social-link">YouTube</span>
-          <span class="social-link">X / Twitter</span>
+          <span class="social-link" title="Coming soon">Instagram</span>
+          <span class="social-link" title="Coming soon">TikTok</span>
+          <span class="social-link" title="Coming soon">YouTube</span>
+          <span class="social-link" title="Coming soon">X / Twitter</span>
         </div>
         <p class="footer-copy">&copy; 2026 7th Room. All rights reserved.</p>
         <p class="footer-lore mono" aria-hidden="true">connection::established // chatroom_v0.7.1 // signal_active</p>
@@ -663,6 +666,6 @@
   </footer>
   <!-- connection established // chatroom v0.7.1 // not everyone will understand this -->
 
-  <script src="js/main.js?v=9"></script>
+  <script src="js/main.js?v=13"></script>
 </body>
 </html>

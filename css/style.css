@@ -549,36 +549,32 @@ body.intro-active { overflow: hidden; }
   z-index: 0;
 }
 
-.section:nth-child(odd)::before {
+.section.deco-a::before {
   content: '✦';
   top: 60px;
   left: 8%;
   color: var(--hot-pink);
-  animation: twinkle 18s ease-in-out infinite;
 }
 
-.section:nth-child(odd)::after {
+.section.deco-a::after {
   content: '★';
   bottom: 80px;
   right: 10%;
   color: var(--purple);
-  animation: twinkle 22s ease-in-out infinite 3s;
 }
 
-.section:nth-child(even)::before {
+.section.deco-b::before {
   content: '♡';
   top: 50px;
   right: 6%;
   color: var(--hot-pink);
-  animation: twinkle 20s ease-in-out infinite 5s;
 }
 
-.section:nth-child(even)::after {
+.section.deco-b::after {
   content: '✧';
   bottom: 60px;
   left: 12%;
   color: var(--deep-blue);
-  animation: twinkle 24s ease-in-out infinite 8s;
 }
 
 .section-alt {
@@ -730,6 +726,17 @@ body.intro-active { overflow: hidden; }
   color: var(--text-light);
   opacity: 0.5;
 }
+
+.chat-char-count {
+  font-size: 0.65rem;
+  color: var(--text-light);
+  opacity: 0;
+  padding: 0 6px;
+  align-self: center;
+  transition: opacity 0.2s;
+}
+
+.chat-char-count.visible { opacity: 0.6; }
 
 .chatroom-send {
   padding: 10px 16px;
@@ -1625,6 +1632,8 @@ a, button, .nav-toggle, .faq-question, .category-card,
     align-items: center;
     justify-content: center;
     gap: 16px;
+    overflow-y: auto;
+    padding: 24px 0;
   }
 
   .nav-links.open {
@@ -1712,6 +1721,11 @@ a, button, .nav-toggle, .faq-question, .category-card,
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
-    transition-duration: 0.01ms !important;
   }
+  /* Keep functional transitions (fades, state changes) but kill decorative ones */
+  .intro-overlay { transition: opacity 0.3s ease !important; }
+  .modal-overlay { transition: opacity 0.2s ease !important; }
+  .form-input { transition: border-color 0.2s, box-shadow 0.2s !important; }
+  .reveal { transition: opacity 0.3s ease !important; transform: none !important; }
+  .word-reveal { transition: opacity 0.3s ease !important; transform: none !important; }
 }
