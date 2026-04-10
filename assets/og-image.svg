@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fff5fa"/>
+      <stop offset="50%" stop-color="#f0e8ff"/>
+      <stop offset="100%" stop-color="#e8f4ff"/>
+    </linearGradient>
+    <linearGradient id="txt" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ff1493"/>
+      <stop offset="50%" stop-color="#9966ff"/>
+      <stop offset="100%" stop-color="#00bfff"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <text x="600" y="240" text-anchor="middle" font-family="sans-serif" font-weight="700" font-size="90" fill="url(#txt)">7th Room</text>
+  <text x="600" y="330" text-anchor="middle" font-family="sans-serif" font-weight="400" font-size="36" fill="#7b6890">Global K-Pop Girl Group Audition</text>
+  <text x="600" y="420" text-anchor="middle" font-family="sans-serif" font-weight="700" font-size="28" fill="#ff1493">7 Girls · 7 Countries · 1 Room</text>
+  <text x="600" y="520" text-anchor="middle" font-family="monospace" font-size="22" fill="#9966ff">✦ Apply Now ✦</text>
+</svg>

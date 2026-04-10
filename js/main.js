@@ -140,7 +140,7 @@
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     if (window.matchMedia('(pointer: coarse)').matches) return;
 
-    var parallaxEls = document.querySelectorAll('.section-title, .chatroom-window, .step-number');
+    var parallaxEls = document.querySelectorAll('.chatroom-window, .category-icon');
     if (!parallaxEls.length) return;
 
     var ticking = false;
@@ -174,7 +174,7 @@
         var rect = btn.getBoundingClientRect();
         var x = e.clientX - rect.left - rect.width / 2;
         var y = e.clientY - rect.top - rect.height / 2;
-        btn.style.transform = 'translate(' + (x * 0.15) + 'px, ' + (y * 0.15) + 'px)';
+        btn.style.transform = 'translate(' + (x * 0.15) + 'px, ' + (y * 0.15 - 3) + 'px)';
       });
       btn.addEventListener('mouseleave', function () {
         btn.style.transform = '';
@@ -223,6 +223,16 @@
         navToggle.setAttribute('aria-expanded', 'false');
         document.body.style.overflow = '';
       });
+    });
+
+    // Escape closes mobile nav
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && navLinks.classList.contains('open')) {
+        navLinks.classList.remove('open');
+        navToggle.classList.remove('open');
+        navToggle.setAttribute('aria-expanded', 'false');
+        document.body.style.overflow = '';
+      }
     });
 
     // Active section highlighting
@@ -457,8 +467,13 @@
         this.classList.remove('dragover');
       });
 
-      fileUpload.addEventListener('drop', function () {
+      fileUpload.addEventListener('drop', function (e) {
+        e.preventDefault();
         this.classList.remove('dragover');
+        if (e.dataTransfer && e.dataTransfer.files.length > 0) {
+          photoInput.files = e.dataTransfer.files;
+          photoInput.dispatchEvent(new Event('change'));
+        }
       });
     }
 
@@ -489,7 +504,7 @@
         }
       } else if (input.type === 'email' && input.value && !/^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/.test(input.value)) {
         msg = 'Please enter a valid email.';
-      } else if (input.type === 'url' && input.value && !/^https:\/\/(www\.)?(youtube\.com|youtu\.be|drive\.google\.com)\/.+/i.test(input.value)) {
+      } else if (input.type === 'url' && input.value && !/^https?:\/\/(www\.)?(youtube\.com|youtu\.be|drive\.google\.com)\/.+/i.test(input.value)) {
         msg = 'Please use a YouTube or Google Drive link (https://...)';
       } else if (input.id === 'dob' && input.value) {
         var dob = new Date(input.value);
@@ -838,6 +853,10 @@
     // Escape skips
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape' && !introComplete) finishIntro();
+      if ((e.key === 'Enter' || e.key === ' ') && !sequenceStarted && !introComplete) {
+        e.preventDefault();
+        startSequence();
+      }
     });
   }
 
@@ -1203,22 +1222,37 @@
       return arr[Math.floor(Math.random() * arr.length)];
     }
 
-    var usedHandleIndexes = [];
-    var usedCityIndexes = [];
+    // Fisher-Yates shuffle
+    function shuffle(arr) {
+      var a = arr.slice();
+      for (var i = a.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+      }
+      return a;
+    }
+
+    var shuffledHandles = shuffle(handles);
+    var shuffledCities = shuffle(cities);
+    var handleIdx = 0;
+    var cityIdx = 0;
 
     function createUser() {
-      var hi = Math.floor(Math.random() * handles.length);
-      while (usedHandleIndexes.indexOf(hi) !== -1 && usedHandleIndexes.length < handles.length) {
-        hi = Math.floor(Math.random() * handles.length);
+      if (handleIdx >= shuffledHandles.length) {
+        shuffledHandles = shuffle(handles);
+        handleIdx = 0;
       }
-      usedHandleIndexes.push(hi);
-      var ci = Math.floor(Math.random() * cities.length);
-      while (usedCityIndexes.indexOf(ci) !== -1 && usedCityIndexes.length < cities.length) {
-        ci = Math.floor(Math.random() * cities.length);
+      if (cityIdx >= shuffledCities.length) {
+        shuffledCities = shuffle(cities);
+        cityIdx = 0;
       }
-      usedCityIndexes.push(ci);
-      var user = { handle: handles[hi], city: cities[ci], cssClass: pickRandom(userClasses) };
+      var user = {
+        handle: shuffledHandles[handleIdx++],
+        city: shuffledCities[cityIdx++],
+        cssClass: pickRandom(userClasses)
+      };
       activeUsers.push(user);
+      if (activeUsers.length > 10) activeUsers.shift();
       return user;
     }
 
@@ -1289,7 +1323,7 @@
 
     function playNextConversation() {
       if (conversationIndex >= conversations.length) {
-        conversations.sort(function () { return Math.random() - 0.5; });
+        conversations = shuffle(conversations);
         conversationIndex = 0;
       }
       var thread = conversations[conversationIndex++];
@@ -1361,7 +1395,7 @@
     function startChatSequence() {
       if (chatStarted) return;
       chatStarted = true;
-      conversations.sort(function () { return Math.random() - 0.5; });
+      conversations = shuffle(conversations);
 
       queueMessage('[SYSTEM] Room initialized.', 'system', 16, 0);
       queueMessage('[SYSTEM] Scanning for connections...', 'system', 16, 600);
@@ -1398,18 +1432,38 @@
     // --- User Input Handler ---
     function sendUserMessage() {
       var text = input.value.trim().substring(0, 120);
-      if (!text || isTyping) return;
+      if (!text) return;
       input.value = '';
 
-      queueMessage('you: ' + text, 'user-you', 10, 0);
+      // User messages always go through — queue at front, don't wait for auto-typing
+      var p = document.createElement('p');
+      p.className = 'chat-msg user-you';
+      p.textContent = 'you: ' + text;
+      while (body.children.length >= MAX_MESSAGES) body.removeChild(body.firstChild);
+      body.appendChild(p);
+      scrollChat();
       processUserInput(text);
     }
+
+    var chatCharEl = document.getElementById('chatCharCount');
 
     if (input) {
       input.addEventListener('keydown', function (e) {
         if (e.key === 'Enter') {
           e.preventDefault();
           sendUserMessage();
+          if (chatCharEl) { chatCharEl.textContent = ''; chatCharEl.classList.remove('visible'); }
+        }
+      });
+      input.addEventListener('input', function () {
+        if (chatCharEl) {
+          var len = input.value.length;
+          if (len > 80) {
+            chatCharEl.textContent = len + '/120';
+            chatCharEl.classList.add('visible');
+          } else {
+            chatCharEl.classList.remove('visible');
+          }
         }
       });
     }
