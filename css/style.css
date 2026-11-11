@@ -220,17 +220,6 @@ a, button, select, summary,
   color: white;
 }
 
-@keyframes twinkle {
-  0%, 100% { opacity: 0.1; }
-  50% { opacity: 0.3; }
-}
-
-@keyframes float-orb {
-  0%, 100% { transform: translateY(0) translateX(0); }
-  33% { transform: translateY(-15px) translateX(8px); }
-  66% { transform: translateY(10px) translateX(-5px); }
-}
-
 /* --- Gradient Text --- */
 /* Text filled with a brand gradient: three colours for the big headings,
    two for the small accents. (Section titles end up with the gradient on
@@ -254,7 +243,6 @@ a, button, select, summary,
   background-clip: text;
   -webkit-text-fill-color: transparent;
 }
-
 
 /* ===================== INTRO OVERLAY ===================== */
 .intro-overlay {
@@ -405,6 +393,11 @@ body.intro-active { overflow: hidden; }
   box-shadow: 0 0 8px var(--hot-pink);
   animation: twinkle 18s ease-in-out infinite;
   animation-delay: var(--delay);
+}
+
+@keyframes twinkle {
+  0%, 100% { opacity: 0.1; }
+  50% { opacity: 0.3; }
 }
 
 .intro-skip {
@@ -644,6 +637,38 @@ body.intro-active { overflow: hidden; }
   animation: float-orb 15s ease-in-out infinite reverse;
 }
 
+@keyframes float-orb {
+  0%, 100% { transform: translateY(0) translateX(0); }
+  33% { transform: translateY(-15px) translateX(8px); }
+  66% { transform: translateY(10px) translateX(-5px); }
+}
+
+/* Slowly shifting colour wash behind the particles */
+.hero-gradient-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: linear-gradient(
+    -45deg,
+    rgba(255, 182, 255, 0.15),
+    rgba(135, 206, 250, 0.15),
+    rgba(255, 105, 180, 0.12),
+    rgba(153, 102, 255, 0.12),
+    rgba(0, 191, 255, 0.12),
+    rgba(255, 182, 255, 0.15)
+  );
+  background-size: 400% 400%;
+  animation: hero-gradient-shift 12s ease infinite;
+}
+
+@keyframes hero-gradient-shift {
+  0% { background-position: 0% 50%; }
+  25% { background-position: 100% 25%; }
+  50% { background-position: 100% 50%; }
+  75% { background-position: 0% 75%; }
+  100% { background-position: 0% 50%; }
+}
+
 .hero-particles {
   position: absolute;
   inset: 0;
@@ -652,6 +677,17 @@ body.intro-active { overflow: hidden; }
   z-index: 1;
 }
 
+/* The text block. main.js fades and shrinks it as the hero scrolls away. */
+.hero-content {
+  position: relative;
+  z-index: 3;
+  text-align: center;
+  padding: 0 24px;
+  padding-left: max(24px, env(safe-area-inset-left));
+  padding-right: max(24px, env(safe-area-inset-right));
+  will-change: transform, opacity;
+  transition: opacity 0.1s, transform 0.1s;
+}
 
 .hero-system-msg {
   font-size: 0.78rem;
@@ -696,6 +732,44 @@ body.intro-active { overflow: hidden; }
   letter-spacing: 1px;
 }
 .coord-separator { margin: 0 6px; }
+
+/* ===================== MARQUEE TICKER ===================== */
+.marquee-wrap {
+  overflow: hidden;
+  background: var(--grad-brand-h);
+  padding: 10px 0;
+  position: relative;
+  z-index: 2;
+}
+
+.marquee-track {
+  display: flex;
+  width: max-content;
+  animation: marquee-scroll 90s linear infinite;
+  will-change: transform;
+}
+
+.marquee-track span {
+  color: white;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  padding: 0 40px;
+}
+
+.marquee-track .marquee-star {
+  color: rgba(255, 255, 255, 0.5);
+  padding: 0 12px;
+  font-size: 0.6rem;
+}
+
+@keyframes marquee-scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
 
 /* ===================== SECTIONS ===================== */
 .section {
@@ -781,6 +855,27 @@ body.intro-active { overflow: hidden; }
   color: var(--text-light);
   margin-bottom: 50px;
   text-align: center;
+}
+
+/* Row of symbols that overlaps the join between two sections */
+.section-divider {
+  --divider-gap: 16px;
+  text-align: center;
+  /* letter-spacing is also added after the last symbol; the same amount in
+     front keeps the row on the centre line */
+  padding: 0 0 0 var(--divider-gap);
+  margin: -30px 0;
+  position: relative;
+  z-index: 2;
+  font-size: 1rem;
+  letter-spacing: var(--divider-gap);
+  color: var(--hot-pink);
+  opacity: 0.25;
+  pointer-events: none;
+  line-height: 1;
+  /* Always a single row; the gap shrinks on phones so all nine symbols fit */
+  white-space: nowrap;
+  overflow: hidden;
 }
 
 /* ===================== ABOUT ===================== */
@@ -873,6 +968,10 @@ body.intro-active { overflow: hidden; }
 .chat-msg.user-1 { color: var(--hot-pink); }
 .chat-msg.user-2 { color: var(--purple); }
 .chat-msg.user-3 { color: #00a89e; }
+.chat-msg.user-you {
+  color: var(--hot-pink);
+  font-weight: 700;
+}
 
 /* Chatroom Input Bar */
 .chatroom-input-bar {
@@ -926,11 +1025,6 @@ body.intro-active { overflow: hidden; }
 
 .chatroom-send:hover {
   background: linear-gradient(180deg, #ff8ec5, #e8408a);
-}
-
-.chat-msg.user-you {
-  color: var(--hot-pink);
-  font-weight: 700;
 }
 
 /* ===================== CATEGORIES ===================== */
@@ -1386,8 +1480,6 @@ select.form-input option { color: var(--text); }
   margin-top: 2px;
 }
 
-
-
 /* Send Signal: the pink button look is shared with .btn-glossy (top of the
    file); this is its size and place in the form */
 .btn-submit {
@@ -1649,6 +1741,12 @@ select.form-input option { color: var(--text); }
   letter-spacing: 1px;
 }
 
+/* ============================================
+   EFFECTS
+   Scroll and pointer effects driven by main.js. This group stays last
+   before RESPONSIVE: .reveal has to come after the component rules.
+   ============================================ */
+
 /* ===================== WORD-BY-WORD TEXT REVEAL ===================== */
 /* Move gradient from parent h2 to each span so opacity animation works */
 .text-reveal-ready.gradient-text {
@@ -1722,18 +1820,6 @@ select.form-input option { color: var(--text); }
   scale: none;
 }
 
-/* Hero content fades on scroll */
-.hero-content {
-  position: relative;
-  z-index: 3;
-  text-align: center;
-  padding: 0 24px;
-  padding-left: max(24px, env(safe-area-inset-left));
-  padding-right: max(24px, env(safe-area-inset-right));
-  will-change: transform, opacity;
-  transition: opacity 0.1s, transform 0.1s;
-}
-
 /* ===================== GLITCH ===================== */
 .glitch.glitching {
   animation: glitch-flicker 0.3s linear;
@@ -1759,91 +1845,6 @@ select.form-input option { color: var(--text); }
   opacity: 0.8;
   transition: opacity 0.6s ease, transform 0.6s ease;
   text-shadow: 0 0 6px currentColor;
-}
-
-/* ===================== MARQUEE TICKER ===================== */
-.marquee-wrap {
-  overflow: hidden;
-  background: var(--grad-brand-h);
-  padding: 10px 0;
-  position: relative;
-  z-index: 2;
-}
-
-.marquee-track {
-  display: flex;
-  width: max-content;
-  animation: marquee-scroll 90s linear infinite;
-  will-change: transform;
-}
-
-.marquee-track span {
-  color: white;
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  white-space: nowrap;
-  padding: 0 40px;
-}
-
-.marquee-track .marquee-star {
-  color: rgba(255, 255, 255, 0.5);
-  padding: 0 12px;
-  font-size: 0.6rem;
-}
-
-@keyframes marquee-scroll {
-  0% { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
-}
-
-/* ===================== ANIMATED HERO GRADIENT ===================== */
-.hero-gradient-bg {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  background: linear-gradient(
-    -45deg,
-    rgba(255, 182, 255, 0.15),
-    rgba(135, 206, 250, 0.15),
-    rgba(255, 105, 180, 0.12),
-    rgba(153, 102, 255, 0.12),
-    rgba(0, 191, 255, 0.12),
-    rgba(255, 182, 255, 0.15)
-  );
-  background-size: 400% 400%;
-  animation: hero-gradient-shift 12s ease infinite;
-}
-
-@keyframes hero-gradient-shift {
-  0% { background-position: 0% 50%; }
-  25% { background-position: 100% 25%; }
-  50% { background-position: 100% 50%; }
-  75% { background-position: 0% 75%; }
-  100% { background-position: 0% 50%; }
-}
-
-/* ===================== SECTION DIVIDERS ===================== */
-.section-divider {
-  --divider-gap: 16px;
-  text-align: center;
-  /* letter-spacing is also added after the last symbol; the same amount in
-     front keeps the row on the centre line */
-  padding: 0 0 0 var(--divider-gap);
-  margin: -30px 0;
-  position: relative;
-  z-index: 2;
-  font-size: 1rem;
-  letter-spacing: var(--divider-gap);
-  color: var(--hot-pink);
-  opacity: 0.25;
-  pointer-events: none;
-  line-height: 1;
-  /* Always a single row; the gap shrinks on phones so all nine symbols fit */
-  white-space: nowrap;
-  overflow: hidden;
 }
 
 /* ===================== RESPONSIVE ===================== */
