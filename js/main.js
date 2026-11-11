@@ -5,10 +5,35 @@
 (function () {
   'use strict';
 
+  function prefersReducedMotion() {
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }
+
   // Explicit behavior: 'smooth' ignores the CSS scroll-behavior override,
   // so script-driven scrolls have to check the preference themselves.
   function scrollBehavior() {
-    return window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
+    return prefersReducedMotion() ? 'auto' : 'smooth';
+  }
+
+  // Performance video links: any YouTube host (www., m., music., youtu.be)
+  // or a Google Drive / Docs share link, http(s) only, with something after
+  // the host. Parsed with URL so look-alike hosts (notyoutube.com,
+  // youtube.com.evil.com, user@host tricks) are not accepted.
+  function isAllowedVideoUrl(value) {
+    var url;
+    try {
+      url = new URL(String(value).trim());
+    } catch (e) {
+      return false;
+    }
+    if (url.protocol !== 'https:' && url.protocol !== 'http:') return false;
+    var host = url.hostname.toLowerCase().replace(/\.$/, '');
+    var allowedHost =
+      host === 'youtube.com' || host.endsWith('.youtube.com') ||
+      host === 'youtu.be' || host === 'www.youtu.be' ||
+      host === 'drive.google.com' || host === 'docs.google.com';
+    if (!allowedHost) return false;
+    return (url.pathname + url.search).length > 1;
   }
 
   // --- Word-by-Word Text Reveal ---
@@ -98,6 +123,8 @@
     var heroContent = document.querySelector('.hero-content');
     var hero = document.getElementById('hero');
     if (!heroContent || !hero) return;
+    // Scroll-linked zoom / parallax is decorative motion
+    if (prefersReducedMotion()) return;
 
     var ticking = false;
     window.addEventListener('scroll', function () {
@@ -197,9 +224,56 @@
     var navLinks = document.getElementById('navLinks');
     var links = navLinks.querySelectorAll('a');
 
-    // Scroll effect (rAF-guarded)
+    // Active section highlighting.
+    // Worked out from the scroll position, not from an intersection ratio:
+    // a ratio threshold can never be reached by a section much taller than
+    // the screen (the form, and most sections on a phone). The current
+    // section is the last one with a nav link whose top has passed a line
+    // about a third of the way down the screen. Sections without a link
+    // (Requirements) keep the link of the section before them; above the
+    // first linked section (the hero) nothing is highlighted.
+    var linkedSections = [];
+    links.forEach(function (link) {
+      var id = (link.getAttribute('href') || '').slice(1);
+      var section = id ? document.getElementById(id) : null;
+      if (section) linkedSections.push({ link: link, section: section });
+    });
+    var activeLink = null;
+
+    function updateActiveLink() {
+      var navBottom = navbar.getBoundingClientRect().bottom;
+      var line = navBottom + (window.innerHeight - navBottom) * 0.3;
+      var current = null;
+      var currentTop = -Infinity;
+      var last = null;
+      var lastTop = -Infinity;
+      linkedSections.forEach(function (item) {
+        var top = item.section.getBoundingClientRect().top;
+        if (top <= line && top > currentTop) { current = item.link; currentTop = top; }
+        if (top > lastTop) { last = item.link; lastTop = top; }
+      });
+      // At the very bottom the last section is current, even when it is too
+      // short for its top to reach the line (tall screens)
+      var docEl = document.documentElement;
+      if (last && window.scrollY > 0 &&
+          window.scrollY + window.innerHeight >= docEl.scrollHeight - 2) {
+        current = last;
+      }
+      if (current === activeLink) return;
+      if (activeLink) {
+        activeLink.classList.remove('active');
+        activeLink.removeAttribute('aria-current');
+      }
+      if (current) {
+        current.classList.add('active');
+        current.setAttribute('aria-current', 'location');
+      }
+      activeLink = current;
+    }
+
+    // Scroll effects (rAF-guarded)
     var navTicking = false;
-    window.addEventListener('scroll', function () {
+    function onNavScroll() {
       if (!navTicking) {
         requestAnimationFrame(function () {
           if (window.scrollY > 50) {
@@ -207,11 +281,18 @@
           } else {
             navbar.classList.remove('scrolled');
           }
+          updateActiveLink();
           navTicking = false;
         });
         navTicking = true;
       }
-    }, { passive: true });
+    }
+    window.addEventListener('scroll', onNavScroll, { passive: true });
+    // Section positions also move on rotation / resize and once fonts and
+    // images have loaded
+    window.addEventListener('resize', onNavScroll);
+    window.addEventListener('load', onNavScroll);
+    updateActiveLink();
 
     // Mobile toggle
     navToggle.addEventListener('click', function () {
@@ -240,24 +321,6 @@
         document.body.style.overflow = '';
       }
     });
-
-    // Active section highlighting
-    var sections = document.querySelectorAll('section[id]');
-    var observerNav = new IntersectionObserver(function (entries) {
-      entries.forEach(function (entry) {
-        if (entry.isIntersecting) {
-          var id = entry.target.getAttribute('id');
-          links.forEach(function (l) { l.classList.remove('active'); });
-          var activeLink = navLinks.querySelector('a[href="#' + id + '"]');
-          if (activeLink) activeLink.classList.add('active');
-        }
-      });
-    }, {
-      threshold: 0.3,
-      rootMargin: '-80px 0px -50% 0px'
-    });
-
-    sections.forEach(function (s) { observerNav.observe(s); });
   }
 
   // --- Smooth Scroll ---
@@ -309,10 +372,36 @@
     var particleCount = 60;
     var mouse = { x: null, y: null };
 
-    function resize() {
-      canvas.width = canvas.offsetWidth;
-      canvas.height = canvas.offsetHeight;
+    // Assigning canvas.width / height wipes the canvas. While the loop is
+    // not running (reduced motion draws one static frame; the loop also
+    // stops when the hero is off-screen) nothing would repaint it, so
+    // resize() redraws the frame itself.
+    function drawFrame() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      particles.forEach(function (p) { p.draw(); });
+      drawConnections();
     }
+
+    function resize() {
+      var w = canvas.offsetWidth;
+      var h = canvas.offsetHeight;
+      if (w === canvas.width && h === canvas.height) return;
+      var oldW = canvas.width;
+      var oldH = canvas.height;
+      canvas.width = w;
+      canvas.height = h;
+      // Keep the particles spread over the new size
+      if (oldW > 0 && oldH > 0) {
+        particles.forEach(function (p) {
+          p.x = p.x * w / oldW;
+          p.y = p.y * h / oldH;
+        });
+      }
+      if (!animating) drawFrame();
+    }
+
+    var animating = false;
+    var rafId = null;
 
     resize();
     window.addEventListener('resize', resize);
@@ -393,9 +482,6 @@
       }
     }
 
-    var animating = false;
-    var rafId = null;
-
     function animate() {
       if (!animating) return;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -420,8 +506,7 @@
       });
       if (heroEl) particleObserver.observe(heroEl);
     } else {
-      particles.forEach(function (p) { p.draw(); });
-      drawConnections();
+      drawFrame();
     }
   }
 
@@ -451,15 +536,28 @@
       });
     }
 
-    // File upload visual feedback
+    // Photo upload box
+    var fileText = fileUpload ? fileUpload.querySelector('.file-upload-text') : null;
+    var defaultFileText = fileText ? fileText.textContent : '';
+
+    // Back to the empty state: no file name, no "has file" styling
+    function resetFileUpload() {
+      if (!fileUpload) return;
+      fileUpload.classList.remove('has-file');
+      if (fileText) fileText.textContent = defaultFileText;
+    }
+
     if (fileUpload && photoInput) {
       photoInput.addEventListener('change', function () {
-        if (this.files && this.files.length > 0) {
+        var hasFile = photoInput.files && photoInput.files.length > 0;
+        // validateField empties the input again if the file is not acceptable
+        if (hasFile && validateField(photoInput)) {
           fileUpload.classList.add('has-file');
-          var text = fileUpload.querySelector('.file-upload-text');
-          if (text) text.textContent = this.files[0].name;
+          if (fileText) fileText.textContent = photoInput.files[0].name;
         } else {
-          fileUpload.classList.remove('has-file');
+          // Rejected file, or the selection was cleared (picker cancelled)
+          if (!hasFile) validateField(photoInput);
+          resetFileUpload();
         }
       });
 
@@ -477,40 +575,55 @@
         e.preventDefault();
         this.classList.remove('dragover');
         if (e.dataTransfer && e.dataTransfer.files.length > 0) {
-          photoInput.files = e.dataTransfer.files;
+          var dropped = e.dataTransfer.files;
+          // One photo only: keep the first of several dropped files
+          if (dropped.length > 1 && typeof DataTransfer === 'function') {
+            try {
+              var single = new DataTransfer();
+              single.items.add(dropped[0]);
+              dropped = single.files;
+            } catch (err) {
+              // keep the full list; validateField checks every file in it
+            }
+          }
+          photoInput.files = dropped;
           photoInput.dispatchEvent(new Event('change'));
         }
       });
     }
 
+    var ALLOWED_PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+    var MAX_PHOTO_BYTES = 10 * 1024 * 1024;
+
     // Validate individual field
     function validateField(input) {
-      var errorEl = input.closest('.form-group').querySelector('.form-error');
-      if (!errorEl) {
-        // For checkbox
-        var checkboxGroup = input.closest('.form-group');
-        if (checkboxGroup) errorEl = checkboxGroup.querySelector('.form-error');
-      }
+      var group = input.closest('.form-group');
+      var errorEl = group ? group.querySelector('.form-error') : null;
+      var isFile = input.type === 'file';
       var msg = '';
 
-      if (input.required && !input.value.trim() && input.type !== 'checkbox' && input.type !== 'file') {
+      if (input.required && !input.value.trim() && input.type !== 'checkbox' && !isFile) {
         msg = 'This field is required.';
       } else if (input.required && input.type === 'checkbox' && !input.checked) {
         msg = 'You must agree to continue.';
-      } else if (input.required && input.type === 'file' && (!input.files || input.files.length === 0)) {
+      } else if (input.required && isFile && (!input.files || input.files.length === 0)) {
         msg = 'Please upload a photo.';
-      } else if (input.type === 'file' && input.files && input.files.length > 0) {
-        var file = input.files[0];
-        var allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
-        var maxSize = 10 * 1024 * 1024;
-        if (allowedTypes.indexOf(file.type) === -1) {
-          msg = 'Only JPG, PNG, or WebP images are allowed.';
-        } else if (file.size > maxSize) {
-          msg = 'File must be under 10MB.';
+      } else if (isFile && input.files && input.files.length > 0) {
+        for (var i = 0; i < input.files.length && !msg; i++) {
+          if (ALLOWED_PHOTO_TYPES.indexOf(input.files[i].type) === -1) {
+            msg = 'Only JPG, PNG, or WebP images are allowed.';
+          } else if (input.files[i].size > MAX_PHOTO_BYTES) {
+            msg = 'File must be under 10MB.';
+          }
+        }
+        if (msg) {
+          // Do not leave a rejected file attached, or its name on display
+          input.value = '';
+          resetFileUpload();
         }
       } else if (input.type === 'email' && input.value && !/^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/.test(input.value)) {
         msg = 'Please enter a valid email.';
-      } else if (input.type === 'url' && input.value && !/^https?:\/\/(www\.)?(youtube\.com|youtu\.be|drive\.google\.com)\/.+/i.test(input.value)) {
+      } else if (input.type === 'url' && input.value && !isAllowedVideoUrl(input.value)) {
         msg = 'Please use a YouTube or Google Drive link (https://...)';
       } else if (input.id === 'dob' && input.value) {
         var dob = new Date(input.value);
@@ -519,12 +632,15 @@
         }
       }
 
+      // The file input itself is an invisible overlay, so its error state is
+      // shown on the visible upload box
+      var box = isFile && fileUpload ? fileUpload : input;
       if (msg) {
-        input.classList.add('error');
+        box.classList.add('error');
         if (errorEl) errorEl.textContent = msg;
         return false;
       } else {
-        input.classList.remove('error');
+        box.classList.remove('error');
         if (errorEl) errorEl.textContent = '';
         return true;
       }
@@ -544,14 +660,39 @@
       });
     });
 
+    // One submission at a time. The flag covers Enter pressed in a text
+    // field, which submits the form without going through the button.
+    var submitting = false;
+
+    function setSubmitting(on) {
+      submitting = on;
+      submitBtn.classList.toggle('loading', on);
+      submitBtn.disabled = on;
+    }
+
+    function submitSucceeded() {
+      setSubmitting(false);
+      showModal();
+      form.reset();
+      if (charCount) charCount.textContent = '0';
+      resetFileUpload();
+    }
+
+    function submitFailed(message) {
+      setSubmitting(false);
+      alert(message);
+      submitBtn.focus();
+    }
+
     // Form submission
     form.addEventListener('submit', function (e) {
       e.preventDefault();
+      if (submitting) return;
 
-      // Validate all fields
+      // Validate all required fields, and the optional photo if one is attached
       var allValid = true;
-      var requiredInputs = form.querySelectorAll('[required]');
-      requiredInputs.forEach(function (input) {
+      var fieldsToCheck = form.querySelectorAll('[required], #photo');
+      fieldsToCheck.forEach(function (input) {
         if (!validateField(input)) {
           allValid = false;
         }
@@ -562,70 +703,51 @@
         var firstError = form.querySelector('.error');
         if (firstError) {
           firstError.scrollIntoView({ behavior: scrollBehavior(), block: 'center' });
-          firstError.focus();
+          var focusTarget = firstError === fileUpload ? photoInput : firstError;
+          focusTarget.focus({ preventScroll: true });
         }
         return;
       }
 
-      // Show loading
-      submitBtn.classList.add('loading');
-
-      // Collect form data
-      var formData = new FormData(form);
-      var data = {};
-      formData.forEach(function (value, key) {
-        if (key !== 'photo') {
-          data[key] = value;
-        }
-      });
+      // Show loading and lock the button until this attempt has finished
+      setSubmitting(true);
 
       // Submit to Formspree (or simulate if no ID configured)
       var action = form.getAttribute('action');
       if (action && !action.includes('YOUR_FORM_ID')) {
         fetch(action, {
           method: 'POST',
-          body: formData,
+          body: new FormData(form),
           headers: { 'Accept': 'application/json' }
         })
         .then(function (response) {
-          submitBtn.classList.remove('loading');
           if (response.ok) {
-            showModal();
-            form.reset();
-            if (charCount) charCount.textContent = '0';
-            if (fileUpload) {
-              fileUpload.classList.remove('has-file');
-              var text = fileUpload.querySelector('.file-upload-text');
-              if (text) text.textContent = 'Drop your photo here or click to browse';
-            }
+            submitSucceeded();
           } else {
-            alert('Something went wrong. Please try again.');
+            submitFailed('Something went wrong. Please try again.');
           }
-        })
-        .catch(function () {
-          submitBtn.classList.remove('loading');
-          alert('Network error. Please check your connection and try again.');
+        }, function () {
+          submitFailed('Network error. Please check your connection and try again.');
         });
       } else {
         // Simulate submission (no Formspree ID configured)
-        setTimeout(function () {
-          submitBtn.classList.remove('loading');
-          showModal();
-          form.reset();
-          if (charCount) charCount.textContent = '0';
-          if (fileUpload) {
-            fileUpload.classList.remove('has-file');
-            var text = fileUpload.querySelector('.file-upload-text');
-            if (text) text.textContent = 'Drop your photo here or click to browse';
-          }
-        }, 1500);
+        setTimeout(submitSucceeded, 1500);
       }
     });
 
     // Modal
+    var modalOpen = false;
+    var modalHideTimer = null;
+
     function showModal() {
+      // A close that is still fading out must not hide the modal we are
+      // about to show
+      clearTimeout(modalHideTimer);
+      modalHideTimer = null;
+      modalOpen = true;
       modal.hidden = false;
       requestAnimationFrame(function () {
+        if (!modalOpen) return;
         modal.classList.add('active');
         if (modalClose) modalClose.focus();
       });
@@ -633,9 +755,13 @@
     }
 
     function closeModal() {
+      if (!modalOpen) return;
+      modalOpen = false;
       modal.classList.remove('active');
-      setTimeout(function () {
-        modal.hidden = true;
+      clearTimeout(modalHideTimer);
+      modalHideTimer = setTimeout(function () {
+        modalHideTimer = null;
+        if (!modalOpen) modal.hidden = true;
       }, 400);
       document.body.style.overflow = '';
       if (submitBtn) submitBtn.focus();
@@ -650,7 +776,7 @@
     });
 
     document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape' && modal.classList.contains('active')) {
+      if (e.key === 'Escape' && modalOpen) {
         closeModal();
       }
     });
@@ -898,8 +1024,15 @@
 
     var userClasses = ['user-1', 'user-2', 'user-3'];
     var activeUsers = [];
-    var isTyping = false;
     var messageQueue = [];
+    // True from the moment a line is taken off the queue until it has
+    // finished typing, so only one line is ever pending or typing
+    var queueBusy = false;
+    // The line taken off the queue that is still waiting out its pause
+    // before it starts typing (null once typing has begun)
+    var pendingMsg = null;
+    var pendingTimer = null;
+    var nextThreadTimer = null;
     var chatStarted = false;
     var userMsgCount = 0;
 
@@ -936,13 +1069,85 @@
       });
     }
 
+    // --- Name and place extraction ---
+    // Words that can follow "i am" / "call me" without being a name
+    var notNames = [
+      'so', 'very', 'really', 'too', 'not', 'just', 'also', 'still', 'literally',
+      'actually', 'kinda', 'pretty', 'super', 'a', 'an', 'the', 'from', 'in',
+      'at', 'on', 'here', 'there', 'back', 'new', 'ready', 'going', 'gonna',
+      'trying', 'applying', 'thinking', 'feeling', 'looking', 'hoping',
+      'excited', 'happy', 'sad', 'tired', 'exhausted', 'nervous', 'scared',
+      'afraid', 'anxious', 'worried', 'terrified', 'shy', 'bored', 'lost',
+      'confused', 'sorry', 'sure', 'fine', 'ok', 'okay', 'good', 'great',
+      'bad', 'glad', 'obsessed', 'interested', 'curious', 'young', 'old',
+      'late', 'done', 'alone', 'lonely', 'sick', 'hungry', 'sleepy', 'awake',
+      'dead', 'crying', 'shaking', 'screaming', 'maybe', 'later', 'when',
+      'if', 'what', 'who', 'that', 'this', 'it', 'you', 'me', 'him', 'her',
+      'them', 'crazy', 'female', 'korean', 'japanese', 'american', 'british'
+    ];
+
+    function cleanName(raw) {
+      var name = (raw || '').replace(/^['\u2019-]+|['\u2019-]+$/g, '');
+      if (name.length < 2 || name.length > 20) return null;
+      if (notNames.indexOf(name.toLowerCase()) !== -1) return null;
+      return name;
+    }
+
+    // A place name ends at the first of these ("brazil and i sing")
+    var placeStops = [
+      'and', 'but', 'so', 'because', 'bc', 'cuz', 'where', 'which', 'who',
+      'lol', 'lmao', 'haha', 'btw', 'tho', 'though', 'i', 'im', "i'm",
+      'its', "it's", 'originally', 'too', 'also', 'what', 'how', 'hbu',
+      'wbu', 'you', 'u'
+    ];
+    // "from a friend", "from tiktok": a source, not a location
+    var notPlaces = [
+      'a', 'an', 'my', 'our', 'your', 'his', 'her', 'their', 'this', 'that',
+      'these', 'those', 'here', 'there', 'now', 'then', 'what', 'where',
+      'who', 'it', 'me', 'you', 'tiktok', 'instagram', 'insta', 'ig',
+      'youtube', 'yt', 'twitter', 'x', 'google', 'reddit', 'discord',
+      'facebook', 'snapchat', 'pinterest', 'school', 'work', 'home',
+      'friends', 'someone', 'somewhere', 'nowhere', 'everywhere'
+    ];
+    // "the" only introduces a place for names like these
+    var thePlaces = [
+      'philippines', 'us', 'usa', 'uk', 'uae', 'netherlands', 'states',
+      'united', 'bahamas', 'maldives', 'gambia', 'congo', 'czech',
+      'dominican', 'caribbean', 'emirates', 'south', 'north', 'east',
+      'west', 'middle'
+    ];
+
+    function cleanPlace(raw) {
+      var words = (raw || '').replace(/[.,!?;:()"]+[\s\S]*$/, '').trim().split(/\s+/);
+      var kept = [];
+      for (var i = 0; i < words.length && kept.length < 3; i++) {
+        if (!words[i] || placeStops.indexOf(words[i].toLowerCase()) !== -1) break;
+        kept.push(words[i]);
+      }
+      if (!kept.length) return null;
+      var first = kept[0].toLowerCase();
+      if (notPlaces.indexOf(first) !== -1) return null;
+      if (first === 'the' &&
+          (kept.length < 2 || thePlaces.indexOf(kept[1].toLowerCase()) === -1)) {
+        return null;
+      }
+      return kept.join(' ');
+    }
+
     // --- Eliza Pattern Rules ---
     // Each rule: regex pattern, system response templates, user reaction templates
     // {input} = reflected user input, {extract} = captured group from regex
+    // Rules are tried in order and the first match wins, so specific rules
+    // come before general ones. An optional capture(m) returns the text to
+    // use as {extract}, or null when the match is not what the rule is
+    // about (the next rules are then tried).
     var elizaRules = [
       {
-        regex: /\b(?:my name is|im called|call me|i am) (\w+)/i,
-        onMatch: function (m) { memory.userName = m[1]; },
+        // Unambiguous introductions. A bare "i am ..." is usually not a
+        // name; that form is handled further down, after the mood rules.
+        regex: /\b(?:my name is|my name.?s|i.?m called|i am called|call me)\s+([^\s\d.,!?;:()"]+)/i,
+        capture: function (m) { return cleanName(m[1]); },
+        onMatch: function (m, name) { memory.userName = name; },
         system: ['[SYSTEM] Identity registered: {extract}.'],
         users: [
           'hi {extract}!! welcome to the room',
@@ -1019,14 +1224,31 @@
         ]
       },
       {
-        regex: /\b(?:i.?m from|i live in|from) (\w[\w\s]*)/i,
-        onMatch: function (m) { memory.userCountry = m[1].trim(); memory.topics.push('location'); },
+        // "from ..." on its own only counts at the start of the message (the
+        // answer to "where are you from?"), not anywhere in a sentence
+        regex: /(?:\bi.?m from|\bi am from|\bi live in|^\s*from)\s+(.+)/i,
+        capture: function (m) { return cleanPlace(m[1]); },
+        onMatch: function (m, place) { memory.userCountry = place; memory.topics.push('location'); },
         system: ['[SYSTEM] Geolocation locked: {extract}. Signal strength: maximum.'],
         users: [
           '{extract}!! thats so cool. we really are global',
           'no way!! i have always wanted to visit {extract}',
           'different countries same chatroom same dream. i love it',
           'the 7th room has no borders. just vibes'
+        ]
+      },
+      {
+        // "i am <name>": only when the name closes the thought and is not a
+        // common describing word ("i am tired", "i am 17" are not names)
+        regex: /\bi am\s+([^\s\d.,!?;:()"]+)(?=\s*(?:$|[.,!?~;:)]|(?:and|from|btw|lol)\b))/i,
+        capture: function (m) { return cleanName(m[1]); },
+        onMatch: function (m, name) { memory.userName = name; },
+        system: ['[SYSTEM] Identity registered: {extract}.'],
+        users: [
+          'hi {extract}!! welcome to the room',
+          'nice to meet you {extract}!',
+          '{extract}!! i love that name',
+          'welcome {extract}. you belong here'
         ]
       },
       {
@@ -1279,6 +1501,14 @@
     function scrollChat() { body.scrollTop = body.scrollHeight; }
 
     function typeText(el, text, speed, callback) {
+      // Reduced motion: the line appears whole, then holds for about as long
+      // as typing it would have taken, so the room keeps the same pace
+      if (prefersReducedMotion()) {
+        el.textContent = text;
+        scrollChat();
+        setTimeout(function () { if (callback) callback(); }, text.length * speed);
+        return;
+      }
       var i = 0;
       function tick() {
         if (i < text.length) {
@@ -1302,35 +1532,111 @@
       p.className = 'chat-msg ' + cssClass;
       body.appendChild(p);
       scrollChat();
-      isTyping = true;
-      typeText(p, text, typingSpeed, function () {
-        isTyping = false;
-        if (callback) callback();
-        processQueue();
-      });
+      typeText(p, text, typingSpeed, callback);
     }
 
-    function queueMessage(text, cssClass, typingSpeed, delay) {
-      messageQueue.push({ text: text, cssClass: cssClass, speed: typingSpeed, delay: delay || 0 });
-      if (!isTyping) processQueue();
+    // --- Message queue ---
+    // Every typed line goes through this queue and they are shown strictly
+    // one after another: `delay` is the pause between the end of the
+    // previous line and the start of this one.
+    // options.reply marks a reply to the visitor's own message. Replies go
+    // ahead of scripted lines that are still waiting, but behind replies
+    // that are already queued, so they arrive promptly and in order. A line
+    // that is already typing is always allowed to finish first.
+    // options.notBefore (a Date.now() time) keeps the first reply from
+    // starting unnaturally soon after the visitor's message.
+    // options.user is the room member speaking or being announced.
+    function queueMessage(text, cssClass, typingSpeed, delay, options) {
+      options = options || {};
+      var msg = {
+        text: text,
+        cssClass: cssClass,
+        speed: typingSpeed,
+        delay: delay || 0,
+        reply: !!options.reply,
+        notBefore: options.notBefore || 0,
+        user: options.user || null
+      };
+      if (msg.reply) {
+        // A scripted line that has not started typing yet goes back to the
+        // head of the queue, so it does not slip in between the visitor's
+        // message and the reply to it
+        if (pendingMsg && !pendingMsg.reply) {
+          clearTimeout(pendingTimer);
+          pendingTimer = null;
+          messageQueue.unshift(pendingMsg);
+          pendingMsg = null;
+          queueBusy = false;
+        }
+        var at = 0;
+        while (at < messageQueue.length && messageQueue[at].reply) at++;
+        messageQueue.splice(at, 0, msg);
+      } else {
+        messageQueue.push(msg);
+      }
+      processQueue();
     }
 
     function processQueue() {
-      if (isTyping || messageQueue.length === 0) return;
-      var msg = messageQueue.shift();
-      setTimeout(function () { addMessage(msg.text, msg.cssClass, msg.speed); }, msg.delay);
+      if (queueBusy || messageQueue.length === 0) return;
+      // Claim the queue now, not when typing starts: the wait below must
+      // not let a second line through
+      queueBusy = true;
+      pendingMsg = messageQueue.shift();
+      var wait = Math.max(pendingMsg.delay, pendingMsg.notBefore - Date.now());
+      pendingTimer = setTimeout(typePending, wait);
     }
 
-    function connectNewUser() {
+    function typePending() {
+      var msg = pendingMsg;
+      pendingMsg = null;
+      pendingTimer = null;
+      if (msg.user) msg.user.shown = true;
+      addMessage(msg.text, msg.cssClass, msg.speed, function () {
+        queueBusy = false;
+        if (messageQueue.length > 0) {
+          processQueue();
+        } else {
+          scheduleNextConversation();
+        }
+      });
+    }
+
+    // When the room falls quiet, the next scripted conversation starts after
+    // a short lull
+    function scheduleNextConversation() {
+      if (nextThreadTimer !== null) return;
+      nextThreadTimer = setTimeout(function () {
+        nextThreadTimer = null;
+        playNextConversation();
+      }, 4000 + Math.random() * 3000);
+    }
+
+    function connectNewUser(delay) {
       var user = createUser();
-      queueMessage('[SYSTEM] ' + user.handle + ' connected from ' + user.city + '.', 'system', 16, 400);
+      queueMessage('[SYSTEM] ' + user.handle + ' connected from ' + user.city + '.', 'system', 16,
+        delay === undefined ? 400 : delay, { user: user });
       return user;
+    }
+
+    function queueUserLine(user, text, delay, options) {
+      options = options || {};
+      options.user = user;
+      queueMessage(user.handle + ': ' + text, user.cssClass, 28, delay, options);
+    }
+
+    // A room member for a reply to the visitor. Replies jump ahead of the
+    // scripted lines, so only members already seen in the room are reused;
+    // otherwise someone could speak before their own "connected" line.
+    function getReplyUser() {
+      var shown = activeUsers.filter(function (u) { return u.shown; });
+      if (shown.length > 0 && Math.random() > 0.35) return pickRandom(shown);
+      return createUser();
     }
 
     function playConversation(thread) {
       thread.forEach(function (line) {
-        var user = getOrCreateUser();
-        queueMessage(user.handle + ': ' + line.text, user.cssClass, 28, line.pause || 800);
+        queueUserLine(getOrCreateUser(), line.text, line.pause || 800);
       });
     }
 
@@ -1341,7 +1647,7 @@
       }
       var thread = conversations[conversationIndex++];
       if (Math.random() > 0.5) connectNewUser();
-      setTimeout(function () { playConversation(thread); }, 1200);
+      playConversation(thread);
     }
 
     // --- Eliza Input Processor ---
@@ -1356,10 +1662,11 @@
       for (var i = 0; i < elizaRules.length; i++) {
         var rule = elizaRules[i];
         var m = text.match(rule.regex);
-        if (m) {
+        var captured = m && rule.capture ? rule.capture(m) : null;
+        if (m && (!rule.capture || captured)) {
           matched = true;
-          extract = m[1] ? m[1].trim() : '';
-          if (rule.onMatch) rule.onMatch(m);
+          extract = rule.capture ? captured : (m[1] ? m[1].trim() : '');
+          if (rule.onMatch) rule.onMatch(m, extract);
 
           // Pick system response and fill template
           var data = { extract: extract, input: reflect(text) };
@@ -1374,37 +1681,32 @@
         userReaction = getFallbackResponse(text);
       }
 
-      // Queue system response
-      setTimeout(function () {
-        queueMessage(systemMsg, 'system', 16, 400);
-      }, 600);
+      // The replies are queued together, as replies, so they come out in
+      // this order and ahead of any scripted lines still waiting.
 
-      // Queue user reaction from a room member
-      setTimeout(function () {
-        var u = getOrCreateUser();
-        queueMessage(u.handle + ': ' + userReaction, u.cssClass, 28, 500);
-      }, 1800);
+      // System response, about a second after the visitor's message
+      queueMessage(systemMsg, 'system', 16, 300, { reply: true, notBefore: Date.now() + 1000 });
+
+      // Reaction from a room member
+      queueUserLine(getReplyUser(), userReaction, 700, { reply: true });
 
       // 50% chance second user chimes in with mood-based reaction
       if (Math.random() > 0.5) {
-        setTimeout(function () {
-          var u2 = getOrCreateUser();
-          queueMessage(u2.handle + ': ' + getMoodReaction(), u2.cssClass, 28, 600);
-        }, 3200);
+        queueUserLine(getReplyUser(), getMoodReaction(), 900, { reply: true });
       }
 
       // Every few messages, system drops a context-aware follow-up
       if (memory.messagesReceived % 3 === 0) {
         var followUp = getContextFollowUp();
         if (followUp) {
-          setTimeout(function () {
-            queueMessage(followUp, 'system', 16, 500);
-          }, 4500);
+          queueMessage(followUp, 'system', 16, 900, { reply: true });
         }
       }
     }
 
     // --- Boot Sequence ---
+    // Queued in one go; the queue plays the lines one after another with
+    // the given pause before each.
     function startChatSequence() {
       if (chatStarted) return;
       chatStarted = true;
@@ -1413,33 +1715,16 @@
       queueMessage('[SYSTEM] Room initialized.', 'system', 16, 0);
       queueMessage('[SYSTEM] Scanning for connections...', 'system', 16, 600);
 
-      setTimeout(function () {
-        var u1 = connectNewUser();
-        queueMessage(u1.handle + ': hello? is anyone here?', u1.cssClass, 28, 1000);
-      }, 2200);
+      queueUserLine(connectNewUser(900), 'hello? is anyone here?', 1000);
+      queueUserLine(connectNewUser(1100), 'omg hi!! i thought i was alone', 900);
+      queueUserLine(connectNewUser(1000), 'wait this is real?? how did you find this?', 800);
 
-      setTimeout(function () {
-        var u2 = connectNewUser();
-        queueMessage(u2.handle + ': omg hi!! i thought i was alone', u2.cssClass, 28, 900);
-      }, 5000);
+      var slots = 3 + Math.floor(Math.random() * 3);
+      queueMessage('[SYSTEM] ' + slots + ' of 7 slots remaining...', 'system', 16, 1200);
 
-      setTimeout(function () {
-        var u3 = connectNewUser();
-        queueMessage(u3.handle + ': wait this is real?? how did you find this?', u3.cssClass, 28, 800);
-      }, 7500);
-
-      setTimeout(function () {
-        var slots = 3 + Math.floor(Math.random() * 3);
-        queueMessage('[SYSTEM] ' + slots + ' of 7 slots remaining...', 'system', 16, 400);
-      }, 10000);
-
-      setTimeout(function () { playNextConversation(); }, 12000);
-
-      setInterval(function () {
-        if (!isTyping && messageQueue.length === 0) {
-          playNextConversation();
-        }
-      }, 14000);
+      // First scripted conversation follows straight on. After that, each
+      // time the queue runs dry the next one is scheduled (see processQueue).
+      playNextConversation();
     }
 
     // --- User Input Handler ---
@@ -1448,7 +1733,8 @@
       if (!text) return;
       input.value = '';
 
-      // User messages always go through — queue at front, don't wait for auto-typing
+      // The visitor's own message is shown at once, without waiting for the
+      // line being typed; the replies to it are queued ahead of scripted lines
       var p = document.createElement('p');
       p.className = 'chat-msg user-you';
       p.textContent = 'you: ' + text;
