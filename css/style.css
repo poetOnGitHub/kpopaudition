@@ -91,7 +91,7 @@ a, button, select, summary,
 .mono { font-family: var(--font-mono); }
 
 /* --- Glossy Glass Panel --- */
-/* Base look for the cards and the form. No backdrop-filter: every element
+/* Base look for the cards. No backdrop-filter: every element
    that uses it sets a 92% or fully white background of its own, so a blur
    behind it could not be seen and only cost a compositing layer each. The
    component rules below come later in the file and override these values
@@ -1296,17 +1296,15 @@ body.intro-active { overflow: hidden; }
 }
 
 /* ===================== FORM ===================== */
+/* The form is a .win-frame (border, corners, white background: see the top
+   of the file) with its own, softer shadow */
 .application-form {
   /* Gutter between the window frame and its content (24px on phones) */
   --form-pad: 32px;
   max-width: 800px;
   margin: 0 auto;
   padding: 0;
-  border: 2px solid var(--win-border);
-  border-radius: 10px 10px 6px 6px;
-  overflow: hidden;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  background: white;
 }
 
 /* Title bar: colours and type come from the shared skin next to .win-titlebar */
