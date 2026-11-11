@@ -9,6 +9,17 @@
     return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   }
 
+  function isCoarsePointer() {
+    return window.matchMedia('(pointer: coarse)').matches;
+  }
+
+  // Pointer-following decoration (parallax, magnetic buttons, sparkle trail,
+  // card tilt) is for a mouse, and not for visitors who asked for less
+  // motion. Asked when each effect starts up, like the two checks it replaces.
+  function wantsPointerEffects() {
+    return !prefersReducedMotion() && !isCoarsePointer();
+  }
+
   // Explicit behavior: 'smooth' ignores the CSS scroll-behavior override,
   // so script-driven scrolls have to check the preference themselves.
   function scrollBehavior() {
@@ -19,6 +30,51 @@
   // a file onto. Used to pick touch wording for prompts.
   function isTouchOnly() {
     return window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+  }
+
+  // Returns a function that runs `fn` at most once per animation frame,
+  // however often it is called. The flag is cleared before `fn` runs, so an
+  // error in `fn` cannot leave it stuck.
+  function rafThrottle(fn) {
+    var queued = false;
+    return function () {
+      if (queued) return;
+      queued = true;
+      requestAnimationFrame(function () {
+        queued = false;
+        fn();
+      });
+    };
+  }
+
+  // --- Scroll frame ---
+  // One passive scroll listener and one animation frame per scroll for all
+  // the scroll-linked effects. The callbacks run in the order they were
+  // registered, which is the order of the init calls in initMain.
+  var scrollFrameCallbacks = [];
+  var queueScrollFrame = rafThrottle(function () {
+    scrollFrameCallbacks.forEach(function (fn) {
+      try {
+        fn();
+      } catch (err) {
+        // One failing effect must not stop the others; still report it
+        setTimeout(function () { throw err; }, 0);
+      }
+    });
+  });
+
+  function onScrollFrame(fn) {
+    if (!scrollFrameCallbacks.length) {
+      window.addEventListener('scroll', queueScrollFrame, { passive: true });
+    }
+    scrollFrameCallbacks.push(fn);
+  }
+
+  // Page scroll lock for the layers that cover the page: the mobile menu and
+  // the success modal. (The intro uses the body.intro-active class instead,
+  // which it drops while its overlay is still fading.)
+  function lockScroll(on) {
+    document.body.style.overflow = on ? 'hidden' : '';
   }
 
   // Keeps Tab / Shift+Tab inside `container` (an open dialog). Used as well
@@ -140,15 +196,7 @@
       });
     }
 
-    var gradientTicking = false;
-    function queueTitleGradients() {
-      if (gradientTicking) return;
-      gradientTicking = true;
-      requestAnimationFrame(function () {
-        gradientTicking = false;
-        layoutTitleGradients();
-      });
-    }
+    var queueTitleGradients = rafThrottle(layoutTitleGradients);
 
     layoutTitleGradients();
     // Words move when the heading re-wraps (resize, rotation) and when the
@@ -190,6 +238,11 @@
     var revealElements = document.querySelectorAll('.reveal');
     if (!revealElements.length) return;
 
+    // Blocks that enter together are revealed one after another
+    var STAGGER_MS = 120;
+    // A little longer than the 0.9s .reveal transition in style.css
+    var REVEAL_DONE_MS = 1000;
+
     var observer = new IntersectionObserver(function (entries) {
       // Group siblings that enter at the same time for staggering
       var batch = [];
@@ -200,10 +253,10 @@
         }
       });
       batch.forEach(function (el, i) {
-        el.style.transitionDelay = (i * 120) + 'ms';
+        el.style.transitionDelay = (i * STAGGER_MS) + 'ms';
         el.classList.add('visible');
         // Clean up delay after animation
-        setTimeout(function () { el.style.transitionDelay = ''; }, 1000 + i * 120);
+        setTimeout(function () { el.style.transitionDelay = ''; }, REVEAL_DONE_MS + i * STAGGER_MS);
       });
     }, {
       // Threshold 0 with the 60px bottom margin: a block shows once 60px of
@@ -226,25 +279,18 @@
     // Scroll-linked zoom / parallax is decorative motion
     if (prefersReducedMotion()) return;
 
-    var ticking = false;
-    window.addEventListener('scroll', function () {
-      if (!ticking) {
-        requestAnimationFrame(function () {
-          var scrollY = window.scrollY;
-          var heroH = hero.offsetHeight;
-          if (scrollY < heroH) {
-            var progress = scrollY / heroH;
-            var opacity = 1 - progress * 1.5;
-            var scale = 1 - progress * 0.15;
-            var translateY = scrollY * 0.4;
-            heroContent.style.opacity = Math.max(0, opacity);
-            heroContent.style.transform = 'translateY(' + translateY + 'px) scale(' + Math.max(0.85, scale) + ')';
-          }
-          ticking = false;
-        });
-        ticking = true;
+    onScrollFrame(function () {
+      var scrollY = window.scrollY;
+      var heroH = hero.offsetHeight;
+      if (scrollY < heroH) {
+        var progress = scrollY / heroH;
+        var opacity = 1 - progress * 1.5;
+        var scale = 1 - progress * 0.15;
+        var translateY = scrollY * 0.4;
+        heroContent.style.opacity = Math.max(0, opacity);
+        heroContent.style.transform = 'translateY(' + translateY + 'px) scale(' + Math.max(0.85, scale) + ')';
       }
-    }, { passive: true });
+    });
   }
 
   // --- Scroll Progress Bar ---
@@ -259,55 +305,36 @@
       bar.style.width = Math.max(0, Math.min(100, progress)) + '%';
     }
 
-    var ticking = false;
-    function onScroll() {
-      if (!ticking) {
-        requestAnimationFrame(function () {
-          update();
-          ticking = false;
-        });
-        ticking = true;
-      }
-    }
-    window.addEventListener('scroll', onScroll, { passive: true });
+    onScrollFrame(update);
     // The page height changes on rotation / resize
-    window.addEventListener('resize', onScroll);
+    window.addEventListener('resize', rafThrottle(update));
     // The page can already be scrolled when this runs (reload, /#apply link)
     update();
   }
 
   // --- Parallax Depth on Sections ---
   function initParallax() {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    if (window.matchMedia('(pointer: coarse)').matches) return;
+    if (!wantsPointerEffects()) return;
 
     var parallaxEls = document.querySelectorAll('.chatroom-window, .category-icon');
     if (!parallaxEls.length) return;
 
-    var ticking = false;
-    window.addEventListener('scroll', function () {
-      if (!ticking) {
-        requestAnimationFrame(function () {
-          parallaxEls.forEach(function (el) {
-            var rect = el.getBoundingClientRect();
-            var windowH = window.innerHeight;
-            if (rect.top < windowH && rect.bottom > 0) {
-              var center = rect.top + rect.height / 2;
-              var offset = (center - windowH / 2) / windowH;
-              el.style.transform = 'translateY(' + (offset * -20) + 'px)';
-            }
-          });
-          ticking = false;
-        });
-        ticking = true;
-      }
-    }, { passive: true });
+    onScrollFrame(function () {
+      parallaxEls.forEach(function (el) {
+        var rect = el.getBoundingClientRect();
+        var windowH = window.innerHeight;
+        if (rect.top < windowH && rect.bottom > 0) {
+          var center = rect.top + rect.height / 2;
+          var offset = (center - windowH / 2) / windowH;
+          el.style.transform = 'translateY(' + (offset * -20) + 'px)';
+        }
+      });
+    });
   }
 
   // --- Magnetic Buttons ---
   function initMagneticButtons() {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    if (window.matchMedia('(pointer: coarse)').matches) return;
+    if (!wantsPointerEffects()) return;
 
     var buttons = document.querySelectorAll('.btn-glossy, .btn-submit, .nav-links a');
     buttons.forEach(function (btn) {
@@ -389,44 +416,36 @@
       updateActiveLink();
     }
 
-    // Scroll effects (rAF-guarded)
-    var navTicking = false;
-    function onNavScroll() {
-      if (!navTicking) {
-        requestAnimationFrame(function () {
-          updateNavState();
-          navTicking = false;
-        });
-        navTicking = true;
-      }
-    }
-    window.addEventListener('scroll', onNavScroll, { passive: true });
+    onScrollFrame(updateNavState);
     // Section positions also move on rotation / resize and once fonts and
     // images have loaded
-    window.addEventListener('resize', onNavScroll);
-    window.addEventListener('load', onNavScroll);
+    var queueNavState = rafThrottle(updateNavState);
+    window.addEventListener('resize', queueNavState);
+    window.addEventListener('load', queueNavState);
     // The page can already be scrolled when this runs (reload, /#apply link)
     updateNavState();
 
-    // Mobile menu. Every way of leaving it goes through closeMenu(), so the
-    // page scroll lock can never outlive the menu.
+    // Mobile menu. Opening and every way of leaving it go through
+    // setMenuOpen(), so the page scroll lock can never outlive the menu.
+    function menuIsOpen() {
+      return navLinks.classList.contains('open');
+    }
+
+    function setMenuOpen(open) {
+      navLinks.classList.toggle('open', open);
+      navToggle.classList.toggle('open', open);
+      navToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      lockScroll(open);
+    }
+
+    // Does nothing while the menu is shut, so it cannot release a scroll
+    // lock that belongs to the modal
     function closeMenu() {
-      if (!navLinks.classList.contains('open')) return;
-      navLinks.classList.remove('open');
-      navToggle.classList.remove('open');
-      navToggle.setAttribute('aria-expanded', 'false');
-      document.body.style.overflow = '';
+      if (menuIsOpen()) setMenuOpen(false);
     }
 
     navToggle.addEventListener('click', function () {
-      if (navLinks.classList.contains('open')) {
-        closeMenu();
-        return;
-      }
-      navLinks.classList.add('open');
-      navToggle.classList.add('open');
-      navToggle.setAttribute('aria-expanded', 'true');
-      document.body.style.overflow = 'hidden';
+      setMenuOpen(!menuIsOpen());
     });
 
     // Close on link click, and on the logo, which stays visible above the menu
@@ -476,11 +495,14 @@
     var glitchEl = document.querySelector('.glitch');
     if (!glitchEl) return;
 
+    // Length of the glitch-flicker animation in style.css
+    var GLITCH_MS = 300;
+
     function triggerGlitch() {
       glitchEl.classList.add('glitching');
       setTimeout(function () {
         glitchEl.classList.remove('glitching');
-      }, 300);
+      }, GLITCH_MS);
     }
 
     // Random glitch intervals
@@ -640,7 +662,7 @@
     }
 
     // Only animate when hero is visible
-    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    if (!prefersReducedMotion()) {
       var heroEl = document.getElementById('hero');
       var particleObserver = new IntersectionObserver(function (entries) {
         if (entries[0].isIntersecting) {
@@ -747,6 +769,10 @@
 
     var ALLOWED_PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
     var MAX_PHOTO_BYTES = 10 * 1024 * 1024;
+    // How long the stand-in for a real submission takes (no Formspree ID yet)
+    var SIMULATED_SUBMIT_MS = 1500;
+    // The modal is taken out of the page once its 0.3s fade (style.css) is over
+    var MODAL_FADE_MS = 400;
 
     // Validate individual field
     function validateField(input) {
@@ -889,7 +915,7 @@
         });
       } else {
         // Simulate submission (no Formspree ID configured)
-        setTimeout(submitSucceeded, 1500);
+        setTimeout(submitSucceeded, SIMULATED_SUBMIT_MS);
       }
     });
 
@@ -909,7 +935,7 @@
         modal.classList.add('active');
         if (modalClose) modalClose.focus();
       });
-      document.body.style.overflow = 'hidden';
+      lockScroll(true);
     }
 
     function closeModal() {
@@ -920,8 +946,8 @@
       modalHideTimer = setTimeout(function () {
         modalHideTimer = null;
         if (!modalOpen) modal.hidden = true;
-      }, 400);
-      document.body.style.overflow = '';
+      }, MODAL_FADE_MS);
+      lockScroll(false);
       if (submitBtn) submitBtn.focus();
     }
 
@@ -1065,6 +1091,14 @@
       enterText.textContent = 'tap to begin';
     }
 
+    // The overlay's opacity transition in style.css
+    var INTRO_FADE_MS = 800;
+    // The intro stays up this long after its last line has appeared
+    var INTRO_HOLD_MS = 1600;
+    // Long enough for the last notes to ring out after the intro has ended
+    // (the welcome chime's final note starts 540ms in and lasts 0.5s)
+    var AUDIO_RELEASE_MS = 1500;
+
     var lines = overlay.querySelectorAll('.intro-line');
     var audioCtx = null;
     var introComplete = false;
@@ -1117,34 +1151,45 @@
       });
     }
 
-    // Run the boot line sequence + sounds
+    // Three quick key clicks
+    function playTypingBurst() {
+      [0, 60, 120].forEach(function (wait) {
+        setTimeout(function () {
+          if (!introComplete) playTypeSound();
+        }, wait);
+      });
+    }
+
+    // What a boot line can ask for in its data-sound attribute in
+    // index.html (a space-separated list, played in the order written)
+    var lineSounds = {
+      type: playTypingBurst,
+      notify: playNotificationSound,
+      connect: playConnectSound,
+      chime: playWelcomeChime
+    };
+
+    // Run the boot line sequence + sounds. Each line says in the markup
+    // when it appears (data-delay, in ms) and what it sounds like.
     function runBootSequence() {
       playBootSound();
 
-      lines.forEach(function (line, index) {
+      var lastDelay = 0;
+      lines.forEach(function (line) {
         var delay = parseInt(line.getAttribute('data-delay'), 10);
+        if (delay > lastDelay) lastDelay = delay;
         setTimeout(function () {
           if (introComplete) return;
           line.classList.add('visible');
-
-          if (index < 5) {
-            for (var i = 0; i < 3; i++) {
-              (function (j) {
-                setTimeout(function () {
-                  if (!introComplete) playTypeSound();
-                }, j * 60);
-              })(i);
-            }
-          }
-          if (index === 3) playNotificationSound();
-          if (index === 5) playConnectSound();
-          if (index === 6) playWelcomeChime();
+          (line.getAttribute('data-sound') || '').split(/\s+/).forEach(function (name) {
+            if (Object.prototype.hasOwnProperty.call(lineSounds, name)) lineSounds[name]();
+          });
         }, delay);
       });
 
       setTimeout(function () {
         if (!introComplete) finishIntro();
-      }, 6800);
+      }, lastDelay + INTRO_HOLD_MS);
     }
 
     // Start the boot sequence (called after user click)
@@ -1190,7 +1235,20 @@
       document.body.classList.remove('intro-active');
       setTimeout(function () {
         overlay.hidden = true;
-      }, 800);
+      }, INTRO_FADE_MS);
+      // The intro is the only thing that makes sound: give the audio device
+      // back once the last notes have faded (playTone does nothing on a
+      // context that is not running)
+      if (audioCtx && typeof audioCtx.close === 'function') {
+        setTimeout(function () {
+          try {
+            var closing = audioCtx.close();
+            if (closing && closing.catch) closing.catch(function () {});
+          } catch (e) {
+            // already closed or not closable: nothing to release
+          }
+        }, AUDIO_RELEASE_MS);
+      }
       initMain();
     }
 
@@ -1264,7 +1322,6 @@
     var pendingTimer = null;
     var nextThreadTimer = null;
     var chatStarted = false;
-    var userMsgCount = 0;
     // The room only "talks" while its window is on screen and the tab is
     // showing. See chatPaused() / resumeChat().
     var chatInView = false;
@@ -1277,7 +1334,6 @@
       userCountry: null,    // if they share location
       userCategory: null,   // vocal/dance/rap etc
       messagesReceived: 0,
-      lastTopic: null,
       nameGivenAt: 0,       // messagesReceived when the name was first given
       nameFollowedUp: false // the one-off name follow-up has been shown
     };
@@ -1319,7 +1375,8 @@
     }
 
     // --- Template Engine ---
-    // {0} = reflected input, {name} = user handle, {city} = user city, {topic} = extracted topic
+    // Fills the {placeholders} of a reply template from `data`. The rules
+    // use one: {extract}.
     function fillTemplate(tpl, data) {
       return tpl.replace(/\{(\w+)\}/g, function (_, key) {
         return data[key] !== undefined ? data[key] : '';
@@ -1393,7 +1450,7 @@
 
     // --- Eliza Pattern Rules ---
     // Each rule: regex pattern, system response templates, user reaction templates
-    // {input} = reflected user input, {extract} = captured group from regex
+    // {extract} = captured group from regex
     // Rules are tried in order and the first match wins, so specific rules
     // come before general ones. An optional capture(m) returns the text to
     // use as {extract}, or null when the match is not what the rule is
@@ -1460,7 +1517,6 @@
       },
       {
         regex: /\b(?:i feel|feeling|i.?m so|i am so) (.+)/i,
-        onMatch: function (m) { memory.lastTopic = 'feelings'; },
         system: ['[SYSTEM] Emotional wavelength logged.'],
         users: [
           'the fact that {extract}... i relate so hard',
@@ -1521,7 +1577,6 @@
       },
       {
         regex: /\bwhat (?:is|are|do you|should)\b/i,
-        onMatch: function () { memory.lastTopic = 'question'; },
         system: ['[SYSTEM] Inquiry processed.'],
         users: [
           'good question honestly. i was wondering that too',
@@ -1820,6 +1875,13 @@
     }
 
     var MAX_MESSAGES = 50;
+    // Typing speed in ms per character: the system prints, members type
+    var TYPE_SPEED_SYSTEM = 16;
+    var TYPE_SPEED_USER = 28;
+    // Longest message the visitor can send: the input's maxlength attribute
+    var MAX_CHARS = input && input.maxLength > 0 ? input.maxLength : 120;
+    // The character counter shows once a message is longer than this
+    var COUNTER_FROM = 80;
 
     // Cap the number of lines kept in the window
     function trimMessages() {
@@ -1854,12 +1916,18 @@
       tick();
     }
 
-    function addMessage(text, cssClass, typingSpeed, callback) {
+    // Puts a line into the window: caps the history first, then follows the
+    // new line into view (`force`: even if the visitor has scrolled up)
+    function appendLine(p, force) {
       trimMessages();
+      body.appendChild(p);
+      scrollChat(force);
+    }
+
+    function addMessage(text, cssClass, typingSpeed, callback) {
       var p = document.createElement('p');
       p.className = 'chat-msg ' + cssClass;
-      body.appendChild(p);
-      scrollChat();
+      appendLine(p);
       typeText(p, text, typingSpeed, callback);
     }
 
@@ -1975,7 +2043,7 @@
       // Announced as part of a reply: replies play in order, ahead of
       // everything else, so later replies can already count on this member
       if (options.reply) user.announced = true;
-      queueMessage('[SYSTEM] ' + user.handle + ' connected from ' + user.city + '.', 'system', 16,
+      queueMessage('[SYSTEM] ' + user.handle + ' connected from ' + user.city + '.', 'system', TYPE_SPEED_SYSTEM,
         delay === undefined ? 400 : delay, options);
       return user;
     }
@@ -1983,7 +2051,7 @@
     function queueUserLine(user, text, delay, options) {
       options = options || {};
       options.user = user;
-      queueMessage(user.handle + ': ' + text, user.cssClass, 28, delay, options);
+      queueMessage(user.handle + ': ' + text, user.cssClass, TYPE_SPEED_USER, delay, options);
     }
 
     // A room member for a reply to the visitor, other than those in
@@ -2050,7 +2118,7 @@
           if (rule.onMatch) rule.onMatch(m, extract);
 
           // Pick system response and fill template
-          var data = { extract: extract, input: reflect(text) };
+          var data = { extract: extract };
           systemMsg = fillTemplate(pickRandom(rule.system), data);
           userReaction = fillTemplate(pickRandom(rule.users), data);
           break;
@@ -2066,7 +2134,7 @@
       // this order and ahead of any scripted lines still waiting.
 
       // System response, about a second after the visitor's message
-      queueMessage(systemMsg, 'system', 16, 300, { reply: true, notBefore: Date.now() + 1000 });
+      queueMessage(systemMsg, 'system', TYPE_SPEED_SYSTEM, 300, { reply: true, notBefore: Date.now() + 1000 });
 
       // Reaction from a room member
       var repliers = [getReplyUser([])];
@@ -2081,7 +2149,7 @@
       // itself when one is due)
       var followUp = getContextFollowUp();
       if (followUp) {
-        queueMessage(followUp, 'system', 16, 900, { reply: true });
+        queueMessage(followUp, 'system', TYPE_SPEED_SYSTEM, 900, { reply: true });
       }
     }
 
@@ -2093,8 +2161,8 @@
       chatStarted = true;
       conversations = shuffle(conversations);
 
-      queueMessage('[SYSTEM] Room initialized.', 'system', 16, 0);
-      queueMessage('[SYSTEM] Scanning for connections...', 'system', 16, 600);
+      queueMessage('[SYSTEM] Room initialized.', 'system', TYPE_SPEED_SYSTEM, 0);
+      queueMessage('[SYSTEM] Scanning for connections...', 'system', TYPE_SPEED_SYSTEM, 600);
 
       queueUserLine(connectNewUser(900), 'hello? is anyone here?', 1000);
       queueUserLine(connectNewUser(1100), 'omg hi!! i thought i was alone', 900);
@@ -2104,7 +2172,7 @@
       var slotEl = document.getElementById('slotCount');
       var slots = slotEl ? parseInt(slotEl.textContent, 10) : NaN;
       if (isNaN(slots)) slots = 3;
-      queueMessage('[SYSTEM] ' + slots + ' of 7 slots remaining...', 'system', 16, 1200);
+      queueMessage('[SYSTEM] ' + slots + ' of 7 slots remaining...', 'system', TYPE_SPEED_SYSTEM, 1200);
 
       // First scripted conversation follows straight on. After that, each
       // time the queue runs dry the next one is scheduled (see processQueue).
@@ -2113,7 +2181,7 @@
 
     // --- User Input Handler ---
     function sendUserMessage() {
-      var text = input.value.trim().substring(0, 120);
+      var text = input.value.trim().substring(0, MAX_CHARS);
       if (!text) return;
       input.value = '';
       // Clearing the value fires no input event, so the counter is reset
@@ -2128,10 +2196,8 @@
       var p = document.createElement('p');
       p.className = 'chat-msg user-you';
       p.textContent = 'you: ' + text;
-      trimMessages();
-      body.appendChild(p);
       // Always bring the visitor's own message (and the replies) into view
-      scrollChat(true);
+      appendLine(p, true);
       processUserInput(text);
     }
 
@@ -2147,8 +2213,8 @@
       input.addEventListener('input', function () {
         if (chatCharEl) {
           var len = input.value.length;
-          if (len > 80) {
-            chatCharEl.textContent = len + '/120';
+          if (len > COUNTER_FROM) {
+            chatCharEl.textContent = len + '/' + MAX_CHARS;
             chatCharEl.classList.add('visible');
           } else {
             // Emptied as well as hidden, so it takes up no room in the bar
@@ -2193,10 +2259,11 @@
 
   // --- Cursor Sparkle Trail ---
   function initSparkleTrail() {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    if (window.matchMedia('(pointer: coarse)').matches) return;
+    if (!wantsPointerEffects()) return;
     var sparkles = [];
     var maxSparkles = 20;
+    // The .sparkle-trail fade-out transition in style.css
+    var SPARKLE_FADE_MS = 600;
     var throttle = 0;
     var chars = ['✦', '★', '✧', '♡', '·'];
     var colors = ['#ff69b4', '#ff1493', '#9966ff', '#00bfff', '#c9a0dc'];
@@ -2229,15 +2296,14 @@
           if (spark.parentNode) spark.parentNode.removeChild(spark);
           var idx = sparkles.indexOf(spark);
           if (idx > -1) sparkles.splice(idx, 1);
-        }, 600);
+        }, SPARKLE_FADE_MS);
       }, 100);
     });
   }
 
   // --- 3D Perspective Tilt on Cards ---
   function initCardTilt() {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    if (window.matchMedia('(pointer: coarse)').matches) return;
+    if (!wantsPointerEffects()) return;
     var cards = document.querySelectorAll('.category-card');
 
     cards.forEach(function (card) {
