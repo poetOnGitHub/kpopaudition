@@ -40,7 +40,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&amp;family=Space+Mono:wght@400;700&amp;display=swap">
-  <link rel="stylesheet" href="css/style.css?v=17">
+  <!-- Cache busting: the stylesheet and both scripts carry the same ?v= number.
+       Raise all three together in any commit that changes a file in css/ or js/. -->
+  <link rel="stylesheet" href="css/style.css?v=18">
   <noscript><style>.reveal { opacity: 1 !important; translate: none !important; scale: none !important; } .intro-overlay { display: none !important; }</style></noscript>
   <!-- Structured Data -->
   <script type="application/ld+json">
@@ -667,7 +669,8 @@
   </footer>
   <!-- connection established // chatroom v0.7.1 // not everyone will understand this -->
 
-  <script src="js/chat-data.js?v=17"></script>
-  <script src="js/main.js?v=17"></script>
+  <!-- chat-data.js holds the chatroom's lines; main.js plays them, so it comes second -->
+  <script src="js/chat-data.js?v=18"></script>
+  <script src="js/main.js?v=18"></script>
 </body>
 </html>
