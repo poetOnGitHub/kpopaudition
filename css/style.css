@@ -4,22 +4,14 @@
    ============================================ */
 
 :root {
-  --pink: #ff69b4;
   --hot-pink: #ff1493;
   --sky-blue: #7ec8e3;
   --deep-blue: #00bfff;
   --purple: #9966ff;
   --lilac: #c9a0dc;
-  --chrome-1: #f0f0f0;
-  --chrome-2: #c0c0c0;
-  --chrome-3: #a0a0a0;
-  --white: #ffffff;
-  --bg: #fff0f5;
-  --bg-alt: #f0e6fa;
   --text: #3a2060;
   --text-light: #7b6890;
   --win-blue-1: #3a8fe8;
-  --win-blue-2: #1a5fcc;
   --font-body: 'Quicksand', system-ui, sans-serif;
   --font-mono: 'Space Mono', monospace;
   --radius: 16px;
@@ -387,8 +379,6 @@ body.intro-active { overflow: hidden; }
   color: white;
   border-color: var(--hot-pink);
 }
-
-.intro-scanlines { display: none; }
 
 /* Touch screens and narrow windows: full-size tap target for SKIP */
 @media (pointer: coarse), (max-width: 768px) {
@@ -817,13 +807,13 @@ body.intro-active { overflow: hidden; }
 
 /* ===================== CHATROOM (MSN Messenger) ===================== */
 .chatroom-window {
-  border: 2px solid #7eb4ea !important;
-  border-radius: 10px 10px 6px 6px !important;
+  border: 2px solid #7eb4ea;
+  border-radius: 10px 10px 6px 6px;
   overflow: hidden;
   box-shadow:
     0 8px 32px rgba(0, 0, 0, 0.12),
     0 1px 0 rgba(255, 255, 255, 0.5) inset;
-  background: white !important;
+  background: white;
 }
 
 .chatroom-header {
@@ -840,8 +830,6 @@ body.intro-active { overflow: hidden; }
   font-weight: 700;
   text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
 }
-
-.window-controls { display: flex; gap: 3px; }
 
 .chatroom-body {
   padding: 16px;
@@ -866,10 +854,6 @@ body.intro-active { overflow: hidden; }
 .chat-msg.user-1 { color: var(--hot-pink); }
 .chat-msg.user-2 { color: var(--purple); }
 .chat-msg.user-3 { color: #00a89e; }
-.chat-msg.blink .cursor {
-  animation: blink-cursor 1s step-end infinite;
-}
-@keyframes blink-cursor { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
 
 /* Chatroom Input Bar */
 .chatroom-input-bar {
@@ -1442,7 +1426,6 @@ select.form-input option { color: var(--text); }
 .btn-submit.loading .btn-text { display: none; }
 .btn-submit .btn-loading { display: none; }
 .btn-submit.loading .btn-loading { display: inline; }
-.btn-glow { display: none; }
 
 /* ===================== MODAL ===================== */
 .modal-overlay {
@@ -1684,8 +1667,8 @@ select.form-input option { color: var(--text); }
 /* ===================== WORD-BY-WORD TEXT REVEAL ===================== */
 /* Move gradient from parent h2 to each span so opacity animation works */
 .text-reveal-ready.gradient-text {
-  background: none !important;
-  -webkit-text-fill-color: initial !important;
+  background: none;
+  -webkit-text-fill-color: initial;
 }
 
 /* main.js sizes and offsets each word's gradient (inline background-size /

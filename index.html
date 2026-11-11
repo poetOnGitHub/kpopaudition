@@ -124,7 +124,6 @@
   <!-- Cinematic Chatroom Intro -->
   <div class="intro-overlay" id="introOverlay" role="dialog" aria-modal="true" aria-label="Welcome to 7th Room" tabindex="-1">
     <div class="intro-screen">
-      <div class="intro-scanlines" aria-hidden="true"></div>
       <div class="intro-terminal">
         <button type="button" class="intro-enter" id="introEnter">
           <span class="intro-enter-text">click or press Enter to begin</span>
@@ -189,12 +188,12 @@
     <canvas class="hero-particles" id="heroParticles" aria-hidden="true"></canvas>
     <div class="hero-content">
       <p class="hero-system-msg mono" aria-hidden="true">[SYSTEM] connection established...</p>
-      <h1 class="hero-title glitch" data-text="Are you ready to be found?">Are you ready to be found?</h1>
+      <h1 class="hero-title glitch">Are you ready to be found?</h1>
       <p class="hero-subtitle">We're looking for connection.</p>
       <div class="hero-slots mono" role="img" aria-label="3 of 7 audition slots remaining">
-        <span class="slot-indicator">[</span>
-        <span class="slot-count" id="slotCount">3</span>
-        <span class="slot-indicator"> of 7 slots remaining...]</span>
+        <span>[</span>
+        <span id="slotCount">3</span>
+        <span> of 7 slots remaining...]</span>
       </div>
       <a href="#about" class="btn-glossy" aria-label="Enter and learn more">
         <span>Enter</span>
@@ -257,7 +256,7 @@
           <div class="chatroom-window win-frame">
             <div class="chatroom-header win-titlebar">
               <span class="chatroom-title">7thRoom Chat v0.7.1</span>
-              <div class="window-controls win-controls" aria-hidden="true">
+              <div class="win-controls" aria-hidden="true">
                 <span class="win-btn">_</span>
                 <span class="win-btn">□</span>
                 <span class="win-btn close">×</span>
@@ -546,7 +545,6 @@
         <button type="submit" class="btn-submit" id="submitBtn">
           <span class="btn-text">Send Signal</span>
           <span class="btn-loading" aria-hidden="true">Transmitting...</span>
-          <span class="btn-glow" aria-hidden="true"></span>
         </button>
       </form>
     </div>
