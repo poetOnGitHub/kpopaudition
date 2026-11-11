@@ -12,6 +12,7 @@
   --text: #3a2060;
   --text-light: #7b6890;
   --win-blue-1: #3a8fe8;
+  --win-border: #7eb4ea;
   --font-body: 'Quicksand', system-ui, sans-serif;
   --font-mono: 'Space Mono', monospace;
   --radius: 16px;
@@ -20,6 +21,22 @@
   --max-width: 1100px;
   --shadow-soft: 0 4px 20px rgba(153, 102, 255, 0.12);
   --shadow-glossy: 0 8px 32px rgba(255, 105, 180, 0.2), 0 2px 8px rgba(0, 0, 0, 0.06);
+  /* Gradients and the easing curve that are used in more than one place */
+  --grad-brand: linear-gradient(135deg, var(--hot-pink), var(--purple), var(--deep-blue));
+  --grad-brand-h: linear-gradient(90deg, var(--hot-pink), var(--purple), var(--deep-blue));
+  --grad-brand-2: linear-gradient(135deg, var(--hot-pink), var(--purple));
+  --grad-rainbow: linear-gradient(90deg,
+    var(--hot-pink), var(--purple), var(--deep-blue),
+    var(--sky-blue), var(--purple), var(--hot-pink));
+  --grad-titlebar: linear-gradient(180deg, #4fadff, #2878d8, #2060c0, #58a0f0);
+  --grad-btn-pink: linear-gradient(180deg, #ff8ec5 0%, #ff69b4 40%, #e8408a 100%);
+  --grad-btn-blue: linear-gradient(180deg, #4fadff, #2878d8);
+  --ease-out: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  /* Stacking order of the fixed layers */
+  --z-nav: 1000;
+  --z-progress: 1001;
+  --z-sparkle: 9998;
+  --z-overlay: 9999;
   --cursor-link: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Cpath d='M6 2l10 8-4 1 3 7-2.5 1-3-7-3.5 3z' fill='%23ff69b4' stroke='%23d03a80' stroke-width='1'/%3E%3C/svg%3E") 6 2, pointer;
 }
 
@@ -89,7 +106,7 @@ a, button, select, summary,
 
 /* --- Windows XP Frame --- */
 .win-frame {
-  border: 2px solid #7eb4ea;
+  border: 2px solid var(--win-border);
   border-radius: 10px 10px 6px 6px;
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12),
     0 1px 0 rgba(255, 255, 255, 0.6) inset;
@@ -97,17 +114,26 @@ a, button, select, summary,
   background: white;
 }
 
-.win-titlebar {
-  background: linear-gradient(180deg, #4fadff, #2878d8, #2060c0, #58a0f0);
-  padding: 6px 10px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+/* Blue title bar skin: the chat window's header, and the caption strips the
+   form and the success modal draw with ::before. This rule has to stay
+   above .chatroom-header and the two ::before rules, which only add their
+   own text and padding. */
+.win-titlebar,
+.application-form::before,
+.modal::before {
+  background: var(--grad-titlebar);
   color: white;
   font-family: var(--font-mono);
   font-size: 0.78rem;
   font-weight: 700;
   text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.win-titlebar {
+  padding: 6px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .win-controls {
@@ -137,39 +163,52 @@ a, button, select, summary,
   border-color: #b03030;
 }
 
-/* --- Glossy Button --- */
-.btn-glossy {
-  display: inline-block;
-  padding: 14px 42px;
+/* --- Glossy Pink Button --- */
+/* One look for the hero's Enter link (.btn-glossy) and the form's Send
+   Signal button (.btn-submit, in the FORM section). Size, shadow, transition,
+   hover lift and the strength of the gloss stay with each of them. No cursor
+   here: that is set once, in the list near the top. */
+.btn-glossy,
+.btn-submit {
   font-family: var(--font-body);
   font-size: 0.95rem;
   font-weight: 700;
   letter-spacing: 1px;
   text-transform: uppercase;
   color: white;
-  background: linear-gradient(180deg, #ff8ec5 0%, #ff69b4 40%, #e8408a 100%);
+  background: var(--grad-btn-pink);
   border: 2px solid #d03a80;
   border-radius: 30px;
   position: relative;
   overflow: hidden;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-  box-shadow:
-    0 6px 20px rgba(255, 20, 147, 0.35),
-    0 2px 4px rgba(0, 0, 0, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.35);
-  transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94), box-shadow 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
-.btn-glossy::before {
+/* Gloss highlight over the top half */
+.btn-glossy::before,
+.btn-submit::before {
   content: '';
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   height: 45%;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.45), transparent);
   border-radius: 28px 28px 0 0;
   pointer-events: none;
+}
+
+.btn-glossy {
+  display: inline-block;
+  padding: 14px 42px;
+  box-shadow:
+    0 6px 20px rgba(255, 20, 147, 0.35),
+    0 2px 4px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  transition: transform 0.4s var(--ease-out), box-shadow 0.4s var(--ease-out);
+}
+
+.btn-glossy::before {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.45), transparent);
 }
 
 .btn-glossy:hover {
@@ -193,8 +232,24 @@ a, button, select, summary,
 }
 
 /* --- Gradient Text --- */
-.gradient-text {
-  background: linear-gradient(135deg, var(--hot-pink), var(--purple), var(--deep-blue));
+/* Text filled with a brand gradient: three colours for the big headings,
+   two for the small accents. (Section titles end up with the gradient on
+   each word instead of the heading: see WORD-BY-WORD TEXT REVEAL.) */
+.gradient-text,
+.intro-welcome,
+.hero-title,
+.text-reveal-ready.gradient-text .word-reveal {
+  background: var(--grad-brand);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.logo-accent,
+.accent-text,
+.step-number,
+.modal-title {
+  background: var(--grad-brand-2);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -205,7 +260,7 @@ a, button, select, summary,
 .intro-overlay {
   position: fixed;
   inset: 0;
-  z-index: 9999;
+  z-index: var(--z-overlay);
   background: linear-gradient(135deg, #fff5fa, #f0e8ff, #e8f4ff);
   display: flex;
   align-items: center;
@@ -275,10 +330,6 @@ body.intro-active { overflow: hidden; }
   font-size: 1.8rem;
   font-weight: 700;
   margin-top: 20px;
-  background: linear-gradient(135deg, var(--hot-pink), var(--purple), var(--deep-blue));
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
 }
 
 /* Start prompt: centred inside the terminal card, which is still empty at
@@ -334,7 +385,7 @@ body.intro-active { overflow: hidden; }
   height: 10px;
   margin: 14px auto 0;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--hot-pink), var(--purple));
+  background: var(--grad-brand-2);
   box-shadow: 0 0 16px var(--hot-pink), 0 0 40px rgba(255, 20, 147, 0.3);
   animation: pulse-scale 2s ease-in-out infinite;
 }
@@ -428,13 +479,11 @@ body.intro-active { overflow: hidden; }
   top: 0;
   left: 0;
   right: 0;
-  z-index: 1000;
+  z-index: var(--z-nav);
   height: calc(var(--nav-height) + env(safe-area-inset-top));
   padding-top: env(safe-area-inset-top);
   border-bottom: 3px solid;
-  border-image: linear-gradient(90deg,
-    var(--hot-pink), var(--purple), var(--deep-blue),
-    var(--sky-blue), var(--purple), var(--hot-pink)) 1;
+  border-image: var(--grad-rainbow) 1;
   box-shadow: 0 2px 16px rgba(153, 102, 255, 0.1);
 }
 
@@ -479,13 +528,6 @@ body.intro-active { overflow: hidden; }
   letter-spacing: -0.5px;
 }
 
-.logo-accent {
-  background: linear-gradient(135deg, var(--hot-pink), var(--purple));
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
 .nav-links {
   display: flex;
   list-style: none;
@@ -511,7 +553,7 @@ body.intro-active { overflow: hidden; }
 .nav-links a:hover,
 .nav-links a.active {
   color: white;
-  background: linear-gradient(135deg, var(--hot-pink), var(--purple));
+  background: var(--grad-brand-2);
   box-shadow: 0 3px 12px rgba(255, 20, 147, 0.3);
 }
 
@@ -624,10 +666,6 @@ body.intro-active { overflow: hidden; }
   font-size: clamp(2.2rem, 6vw, 4.5rem);
   font-weight: 700;
   margin-bottom: 16px;
-  background: linear-gradient(135deg, var(--hot-pink), var(--purple), var(--deep-blue));
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
   letter-spacing: -1px;
   line-height: 1.15;
 }
@@ -774,10 +812,6 @@ body.intro-active { overflow: hidden; }
 .accent-text {
   font-size: 1.1rem;
   font-weight: 600;
-  background: linear-gradient(135deg, var(--hot-pink), var(--purple));
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
 }
 
 .values-grid {
@@ -806,30 +840,15 @@ body.intro-active { overflow: hidden; }
 }
 
 /* ===================== CHATROOM (MSN Messenger) ===================== */
+/* The window is a .win-frame and its header a .win-titlebar (see the top of
+   the file); only what differs from those is set here */
 .chatroom-window {
-  border: 2px solid #7eb4ea;
-  border-radius: 10px 10px 6px 6px;
-  overflow: hidden;
   box-shadow:
     0 8px 32px rgba(0, 0, 0, 0.12),
     0 1px 0 rgba(255, 255, 255, 0.5) inset;
-  background: white;
 }
 
-.chatroom-header {
-  background: linear-gradient(180deg, #4fadff, #2878d8, #2060c0, #58a0f0);
-  padding: 7px 12px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.chatroom-title {
-  font-size: 0.78rem;
-  color: white;
-  font-weight: 700;
-  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
-}
+.chatroom-header { padding: 7px 12px; }
 
 .chatroom-body {
   padding: 16px;
@@ -896,7 +915,7 @@ body.intro-active { overflow: hidden; }
 .chatroom-send {
   padding: 10px 16px;
   border: none;
-  background: linear-gradient(180deg, #4fadff, #2878d8);
+  background: var(--grad-btn-blue);
   color: white;
   font-size: 0.72rem;
   font-weight: 700;
@@ -930,9 +949,9 @@ body.intro-active { overflow: hidden; }
      (.reveal, further down) can add it to its own transition list instead
      of replacing it. */
   --hover-transition:
-    transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94),
-    box-shadow 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94),
-    border-color 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    transform 0.35s var(--ease-out),
+    box-shadow 0.35s var(--ease-out),
+    border-color 0.35s var(--ease-out);
   transition: var(--hover-transition);
   box-shadow:
     0 4px 16px rgba(153, 102, 255, 0.1),
@@ -1119,8 +1138,8 @@ body.intro-active { overflow: hidden; }
   border-radius: var(--radius);
   box-shadow: var(--shadow-soft);
   --hover-transition:
-    transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94),
-    box-shadow 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    transform 0.5s var(--ease-out),
+    box-shadow 0.5s var(--ease-out);
   transition: var(--hover-transition);
 }
 
@@ -1138,10 +1157,6 @@ body.intro-active { overflow: hidden; }
   font-family: var(--font-body);
   font-size: 1.8rem;
   font-weight: 700;
-  background: linear-gradient(135deg, var(--hot-pink), var(--purple));
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
   line-height: 1;
 }
 
@@ -1188,33 +1203,30 @@ body.intro-active { overflow: hidden; }
 
 /* ===================== FORM ===================== */
 .application-form {
+  /* Gutter between the window frame and its content (24px on phones) */
+  --form-pad: 32px;
   max-width: 800px;
   margin: 0 auto;
   padding: 0;
-  border: 2px solid #7eb4ea;
+  border: 2px solid var(--win-border);
   border-radius: 10px 10px 6px 6px;
   overflow: hidden;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   background: white;
 }
 
+/* Title bar: colours and type come from the shared skin next to .win-titlebar */
 .application-form::before {
   content: '7thRoom Application v1.0';
   display: block;
-  background: linear-gradient(180deg, #4fadff, #2878d8, #2060c0, #58a0f0);
   padding: 7px 12px;
-  color: white;
-  font-family: var(--font-mono);
-  font-size: 0.78rem;
-  font-weight: 700;
-  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 .form-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 20px;
-  padding: 32px;
+  padding: var(--form-pad);
 }
 
 /* Grid items may shrink below their content's intrinsic width, so one long
@@ -1376,23 +1388,13 @@ select.form-input option { color: var(--text); }
 
 
 
+/* Send Signal: the pink button look is shared with .btn-glossy (top of the
+   file); this is its size and place in the form */
 .btn-submit {
   display: block;
-  width: calc(100% - 64px);
-  margin: 0 32px 32px;
+  width: calc(100% - 2 * var(--form-pad));
+  margin: 0 var(--form-pad) var(--form-pad);
   padding: 15px;
-  font-family: var(--font-body);
-  font-size: 0.95rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  color: white;
-  background: linear-gradient(180deg, #ff8ec5 0%, #ff69b4 40%, #e8408a 100%);
-  border: 2px solid #d03a80;
-  border-radius: 30px;
-  position: relative;
-  overflow: hidden;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
   box-shadow:
     0 6px 20px rgba(255, 20, 147, 0.3),
     inset 0 1px 0 rgba(255, 255, 255, 0.3);
@@ -1400,13 +1402,7 @@ select.form-input option { color: var(--text); }
 }
 
 .btn-submit::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 45%;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.35), transparent);
-  border-radius: 28px 28px 0 0;
-  pointer-events: none;
 }
 
 .btn-submit:hover {
@@ -1431,7 +1427,7 @@ select.form-input option { color: var(--text); }
 .modal-overlay {
   position: fixed;
   inset: 0;
-  z-index: 9999;
+  z-index: var(--z-overlay);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1452,7 +1448,7 @@ select.form-input option { color: var(--text); }
   max-height: calc(100vh - 48px);
   max-height: calc(100dvh - 48px);
   padding: 0;
-  border: 2px solid #7eb4ea;
+  border: 2px solid var(--win-border);
   border-radius: 10px;
   overflow: hidden;
   overflow-y: auto;
@@ -1460,16 +1456,11 @@ select.form-input option { color: var(--text); }
   background: white;
 }
 
+/* Title bar: colours and type come from the shared skin next to .win-titlebar */
 .modal::before {
   content: '7thRoom Transmission v1.0';
   display: block;
-  background: linear-gradient(180deg, #4fadff, #2878d8, #2060c0, #58a0f0);
   padding: 7px 12px;
-  color: white;
-  font-family: var(--font-mono);
-  font-size: 0.78rem;
-  font-weight: 700;
-  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 .modal-content {
@@ -1487,10 +1478,6 @@ select.form-input option { color: var(--text); }
 .modal-title {
   font-size: 1.4rem;
   font-weight: 700;
-  background: linear-gradient(135deg, var(--hot-pink), var(--purple));
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
   margin-bottom: 12px;
 }
 
@@ -1510,7 +1497,7 @@ select.form-input option { color: var(--text); }
   font-weight: 700;
   font-size: 0.85rem;
   color: white;
-  background: linear-gradient(180deg, #4fadff, #2878d8);
+  background: var(--grad-btn-blue);
   border: 2px solid #1a5fcc;
   border-radius: 20px;
   box-shadow: 0 3px 10px rgba(40, 120, 216, 0.3),
@@ -1594,9 +1581,7 @@ select.form-input option { color: var(--text); }
     radial-gradient(ellipse at 70% 50%, rgba(153, 102, 255, 0.06) 0%, transparent 50%),
     linear-gradient(180deg, rgba(240, 232, 255, 0.5), rgba(255, 245, 250, 0.5));
   border-top: 3px solid;
-  border-image: linear-gradient(90deg,
-    var(--hot-pink), var(--purple), var(--deep-blue),
-    var(--sky-blue), var(--purple), var(--hot-pink)) 1;
+  border-image: var(--grad-rainbow) 1;
   text-align: center;
   position: relative;
   overflow: hidden;
@@ -1671,16 +1656,13 @@ select.form-input option { color: var(--text); }
   -webkit-text-fill-color: initial;
 }
 
-/* main.js sizes and offsets each word's gradient (inline background-size /
-   background-position) so the words sample one gradient that runs across
-   the whole heading, like the hero title. Without that every word simply
-   carries the full gradient. */
+/* Each word carries the gradient itself (set with the other gradient text
+   near the top of the file). main.js sizes and offsets it (inline
+   background-size / background-position) so the words sample one gradient
+   that runs across the whole heading, like the hero title. Without that
+   every word simply carries the full gradient. */
 .text-reveal-ready.gradient-text .word-reveal {
-  background: linear-gradient(135deg, var(--hot-pink), var(--purple), var(--deep-blue));
   background-repeat: no-repeat;
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
 }
 
 .text-reveal-ready .word-reveal {
@@ -1688,8 +1670,8 @@ select.form-input option { color: var(--text); }
   opacity: 0;
   transform: translateY(20px);
   transition:
-    opacity 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94),
-    transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    opacity 0.6s var(--ease-out),
+    transform 0.6s var(--ease-out);
 }
 
 .text-reveal-ready .word-reveal.revealed {
@@ -1704,8 +1686,8 @@ select.form-input option { color: var(--text); }
   left: 0;
   height: 3px;
   width: 0%;
-  background: linear-gradient(90deg, var(--hot-pink), var(--purple), var(--deep-blue));
-  z-index: 1001;
+  background: var(--grad-brand-h);
+  z-index: var(--z-progress);
   transition: width 0.1s linear;
   box-shadow: 0 0 8px rgba(255, 20, 147, 0.5);
 }
@@ -1728,9 +1710,9 @@ select.form-input option { color: var(--text); }
   translate: 0 40px;
   scale: 0.97;
   transition:
-    opacity 0.9s cubic-bezier(0.25, 0.46, 0.45, 0.94),
-    translate 0.9s cubic-bezier(0.25, 0.46, 0.45, 0.94),
-    scale 0.9s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    opacity 0.9s var(--ease-out),
+    translate 0.9s var(--ease-out),
+    scale 0.9s var(--ease-out),
     var(--hover-transition, visibility 0s);
 }
 
@@ -1773,7 +1755,7 @@ select.form-input option { color: var(--text); }
 .sparkle-trail {
   position: fixed;
   pointer-events: none;
-  z-index: 9998;
+  z-index: var(--z-sparkle);
   opacity: 0.8;
   transition: opacity 0.6s ease, transform 0.6s ease;
   text-shadow: 0 0 6px currentColor;
@@ -1782,7 +1764,7 @@ select.form-input option { color: var(--text); }
 /* ===================== MARQUEE TICKER ===================== */
 .marquee-wrap {
   overflow: hidden;
-  background: linear-gradient(90deg, var(--hot-pink), var(--purple), var(--deep-blue));
+  background: var(--grad-brand-h);
   padding: 10px 0;
   position: relative;
   z-index: 2;
@@ -1938,8 +1920,7 @@ select.form-input option { color: var(--text); }
 
   .hero-coordinates { display: none; }
 
-  .btn-submit { width: calc(100% - 48px); margin: 0 24px 24px; }
-  .form-grid { padding: 24px; }
+  .application-form { --form-pad: 24px; }
 
   .footer-links { flex-wrap: wrap; gap: 12px; }
 }
