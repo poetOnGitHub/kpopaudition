@@ -5,6 +5,12 @@
 (function () {
   'use strict';
 
+  // Explicit behavior: 'smooth' ignores the CSS scroll-behavior override,
+  // so script-driven scrolls have to check the preference themselves.
+  function scrollBehavior() {
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
+  }
+
   // --- Word-by-Word Text Reveal ---
   function initTextReveal() {
     var titles = document.querySelectorAll('.section-title');
@@ -265,7 +271,7 @@
         e.preventDefault();
         var navHeight = document.getElementById('navbar').offsetHeight;
         var top = target.getBoundingClientRect().top + window.scrollY - navHeight;
-        window.scrollTo({ top: top, behavior: 'smooth' });
+        window.scrollTo({ top: top, behavior: scrollBehavior() });
       });
     });
   }
@@ -555,7 +561,7 @@
         // Scroll to first error
         var firstError = form.querySelector('.error');
         if (firstError) {
-          firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          firstError.scrollIntoView({ behavior: scrollBehavior(), block: 'center' });
           firstError.focus();
         }
         return;
@@ -723,6 +729,13 @@
     }
 
     document.body.classList.add('intro-active');
+
+    // Touch devices have nothing to click and no Enter key
+    var enterText = enterPrompt && enterPrompt.querySelector('.intro-enter-text');
+    if (enterText && window.matchMedia('(hover: none) and (pointer: coarse)').matches) {
+      enterText.textContent = 'tap to begin';
+    }
+
     var lines = overlay.querySelectorAll('.intro-line');
     var audioCtx = null;
     var introComplete = false;
