@@ -15,6 +15,12 @@
     return prefersReducedMotion() ? 'auto' : 'smooth';
   }
 
+  // A device whose main input is a finger: nothing to hover, click or drag
+  // a file onto. Used to pick touch wording for prompts.
+  function isTouchOnly() {
+    return window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+  }
+
   // Keeps Tab / Shift+Tab inside `container` (an open dialog). Used as well
   // as, or instead of, the inert attribute, which older Safari lacks.
   function trapTabKey(e, container) {
@@ -101,6 +107,61 @@
       title.classList.add('text-reveal-ready');
     });
 
+    // One gradient across the whole heading. Each word is its own clipped
+    // box (it has to be: a gradient clipped to the text of the <h2> does not
+    // survive the words' own opacity / transform animation), so every word
+    // would otherwise restart the gradient at pink. Give each word a
+    // gradient the size of the heading's text block, shifted back by the
+    // word's own offset in it: together they show one continuous sweep.
+    // offsetLeft / offsetTop are layout positions, so the reveal transform
+    // on the words does not disturb them.
+    function layoutTitleGradients() {
+      titles.forEach(function (title) {
+        var words = title.querySelectorAll('.word-reveal');
+        if (!words.length) return;
+        var boxes = [];
+        var left = Infinity, top = Infinity, right = -Infinity, bottom = -Infinity;
+        words.forEach(function (word) {
+          var box = { x: word.offsetLeft, y: word.offsetTop, w: word.offsetWidth, h: word.offsetHeight };
+          boxes.push(box);
+          if (box.x < left) left = box.x;
+          if (box.y < top) top = box.y;
+          if (box.x + box.w > right) right = box.x + box.w;
+          if (box.y + box.h > bottom) bottom = box.y + box.h;
+        });
+        var width = right - left;
+        var height = bottom - top;
+        // Not laid out (hidden): leave the per-word gradient from the CSS
+        if (!(width > 0 && height > 0)) return;
+        words.forEach(function (word, i) {
+          word.style.backgroundSize = width + 'px ' + height + 'px';
+          word.style.backgroundPosition = (left - boxes[i].x) + 'px ' + (top - boxes[i].y) + 'px';
+        });
+      });
+    }
+
+    var gradientTicking = false;
+    function queueTitleGradients() {
+      if (gradientTicking) return;
+      gradientTicking = true;
+      requestAnimationFrame(function () {
+        gradientTicking = false;
+        layoutTitleGradients();
+      });
+    }
+
+    layoutTitleGradients();
+    // Words move when the heading re-wraps (resize, rotation) and when the
+    // web font replaces the fallback font
+    window.addEventListener('resize', queueTitleGradients);
+    window.addEventListener('load', queueTitleGradients);
+    if (document.fonts) {
+      if (document.fonts.ready) document.fonts.ready.then(queueTitleGradients);
+      if (document.fonts.addEventListener) {
+        document.fonts.addEventListener('loadingdone', queueTitleGradients);
+      }
+    }
+
     // Observe each title
     var observer = new IntersectionObserver(function (entries) {
       entries.forEach(function (entry) {
@@ -145,7 +206,10 @@
         setTimeout(function () { el.style.transitionDelay = ''; }, 1000 + i * 120);
       });
     }, {
-      threshold: 0.08,
+      // Threshold 0 with the 60px bottom margin: a block shows once 60px of
+      // it are on screen. A ratio (it used to be 8%) kept tall blocks, the
+      // form above all, invisible until hundreds of pixels were in view.
+      threshold: 0,
       rootMargin: '0px 0px -60px 0px'
     });
 
@@ -253,10 +317,11 @@
         var y = e.clientY - rect.top - rect.height / 2;
         btn.style.transform = 'translate(' + (x * 0.15) + 'px, ' + (y * 0.15 - 3) + 'px)';
       });
+      // The stylesheet transition of each target covers transform, so the
+      // button eases back by itself. (An inline transition here would
+      // replace the whole list and make colours and shadows snap.)
       btn.addEventListener('mouseleave', function () {
         btn.style.transform = '';
-        btn.style.transition = 'transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
-        setTimeout(function () { btn.style.transition = ''; }, 400);
       });
     });
   }
@@ -444,19 +509,33 @@
     // stops when the hero is off-screen) nothing would repaint it, so
     // resize() redraws the frame itself.
     function drawFrame() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.clearRect(0, 0, width, height);
       particles.forEach(function (p) { p.draw(); });
       drawConnections();
     }
 
+    // Size of the canvas in CSS pixels. Everything is positioned and drawn
+    // in these units; the backing store is larger by the device pixel ratio
+    // (capped at 2 to bound the per-frame cost on 3x phones) so the small
+    // dots and half-pixel lines stay sharp on high-density screens.
+    var width = 0;
+    var height = 0;
+    var ratio = 0;
+
     function resize() {
       var w = canvas.offsetWidth;
       var h = canvas.offsetHeight;
-      if (w === canvas.width && h === canvas.height) return;
-      var oldW = canvas.width;
-      var oldH = canvas.height;
-      canvas.width = w;
-      canvas.height = h;
+      var dpr = Math.min(window.devicePixelRatio || 1, 2);
+      if (w === width && h === height && dpr === ratio) return;
+      var oldW = width;
+      var oldH = height;
+      width = w;
+      height = h;
+      ratio = dpr;
+      canvas.width = Math.round(w * dpr);
+      canvas.height = Math.round(h * dpr);
+      // Assigning width / height also resets the transform
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       // Keep the particles spread over the new size
       if (oldW > 0 && oldH > 0) {
         particles.forEach(function (p) {
@@ -485,8 +564,8 @@
     });
 
     function Particle() {
-      this.x = Math.random() * canvas.width;
-      this.y = Math.random() * canvas.height;
+      this.x = Math.random() * width;
+      this.y = Math.random() * height;
       this.size = Math.random() * 2 + 0.5;
       this.speedX = (Math.random() - 0.5) * 0.3;
       this.speedY = (Math.random() - 0.5) * 0.3;
@@ -511,10 +590,10 @@
       }
 
       // Wrap
-      if (this.x < 0) this.x = canvas.width;
-      if (this.x > canvas.width) this.x = 0;
-      if (this.y < 0) this.y = canvas.height;
-      if (this.y > canvas.height) this.y = 0;
+      if (this.x < 0) this.x = width;
+      if (this.x > width) this.x = 0;
+      if (this.y < 0) this.y = height;
+      if (this.y > height) this.y = 0;
     };
 
     Particle.prototype.draw = function () {
@@ -551,7 +630,7 @@
 
     function animate() {
       if (!animating) return;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.clearRect(0, 0, width, height);
       particles.forEach(function (p) {
         p.update();
         p.draw();
@@ -610,6 +689,8 @@
 
     // Photo upload box
     var fileText = fileUpload ? fileUpload.querySelector('.file-upload-text') : null;
+    // Phones cannot drag a file in and have nothing to click
+    if (fileText && isTouchOnly()) fileText.textContent = 'Tap to choose a photo';
     var defaultFileText = fileText ? fileText.textContent : '';
 
     // Back to the empty state: no file name, no "has file" styling
@@ -863,14 +944,26 @@
     });
   }
 
-  // --- Lore Effects (pause when hero off-screen) ---
+  // --- Lore Effects (each runs only while its own element is on screen) ---
   function initLoreEffects() {
     var timestampEl = document.getElementById('heroTimestamp');
     var coordsEl = document.getElementById('heroCoords');
-    var systemMsgs = document.querySelectorAll('.hero-system-msg, .footer-lore');
+    var systemMsg = document.querySelector('.hero-system-msg');
+    var footerLore = document.querySelector('.footer-lore');
     var heroEl = document.getElementById('hero');
     var loreIntervals = [];
     var loreRunning = false;
+
+    // Now and then the line dips to `low` opacity for a moment. `low` has
+    // to be well under the line's resting opacity in style.css to be seen.
+    function startFlicker(el, low) {
+      return setInterval(function () {
+        if (Math.random() > 0.7) {
+          el.style.opacity = low;
+          setTimeout(function () { el.style.opacity = ''; }, 150);
+        }
+      }, 3000);
+    }
 
     function updateTimestamp() {
       var now = new Date();
@@ -897,14 +990,8 @@
           coordsEl.textContent = lat + '\u00B0N, ' + lng + '\u00B0E';
         }, 5000));
       }
-      systemMsgs.forEach(function (msg) {
-        loreIntervals.push(setInterval(function () {
-          if (Math.random() > 0.7) {
-            msg.style.opacity = '0.2';
-            setTimeout(function () { msg.style.opacity = ''; }, 150);
-          }
-        }, 3000));
-      });
+      // Rests at 0.6
+      if (systemMsg) loreIntervals.push(startFlicker(systemMsg, '0.2'));
     }
 
     function stopLore() {
@@ -918,6 +1005,23 @@
         if (entries[0].isIntersecting) { startLore(); } else { stopLore(); }
       });
       loreObserver.observe(heroEl);
+    }
+
+    // The footer line is a whole page away from the hero, so it has its own
+    // observer: it flickers only while the footer itself is on screen. It
+    // rests at 0.25, so the dip goes almost to nothing.
+    if (footerLore) {
+      var footerFlicker = null;
+      var footerObserver = new IntersectionObserver(function (entries) {
+        var onScreen = entries[entries.length - 1].isIntersecting;
+        if (onScreen && footerFlicker === null) {
+          footerFlicker = startFlicker(footerLore, '0.04');
+        } else if (!onScreen && footerFlicker !== null) {
+          clearInterval(footerFlicker);
+          footerFlicker = null;
+        }
+      });
+      footerObserver.observe(footerLore);
     }
   }
 
@@ -957,7 +1061,7 @@
 
     // Touch devices have nothing to click and no Enter key
     var enterText = enterPrompt && enterPrompt.querySelector('.intro-enter-text');
-    if (enterText && window.matchMedia('(hover: none) and (pointer: coarse)').matches) {
+    if (enterText && isTouchOnly()) {
       enterText.textContent = 'tap to begin';
     }
 
@@ -2104,8 +2208,10 @@
       var spark = document.createElement('span');
       spark.className = 'sparkle-trail';
       spark.textContent = chars[Math.floor(Math.random() * chars.length)];
-      spark.style.left = e.pageX + 'px';
-      spark.style.top = e.pageY + 'px';
+      // Viewport coordinates: .sparkle-trail is position: fixed, so a
+      // sparkle can never add to the size of the page
+      spark.style.left = e.clientX + 'px';
+      spark.style.top = e.clientY + 'px';
       spark.style.color = colors[Math.floor(Math.random() * colors.length)];
       spark.style.fontSize = (8 + Math.random() * 10) + 'px';
       document.body.appendChild(spark);

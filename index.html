@@ -36,11 +36,12 @@
   <meta name="format-detection" content="telephone=no">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src https://fonts.gstatic.com; connect-src https://formspree.io; img-src 'self' data:;">
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&amp;family=Space+Mono:wght@400;700&amp;display=swap">
-  <link rel="stylesheet" href="css/style.css?v=16">
-  <noscript><style>.reveal { opacity: 1 !important; transform: none !important; } .intro-overlay { display: none !important; }</style></noscript>
+  <link rel="stylesheet" href="css/style.css?v=17">
+  <noscript><style>.reveal { opacity: 1 !important; translate: none !important; scale: none !important; } .intro-overlay { display: none !important; }</style></noscript>
   <!-- Structured Data -->
   <script type="application/ld+json">
   {
@@ -130,22 +131,22 @@
           <span class="intro-enter-pulse" aria-hidden="true"></span>
         </button>
         <div class="intro-line" data-delay="300">
-          <span class="intro-prefix">&gt;</span> SYSTEM BOOT_
+          <span class="intro-prefix" aria-hidden="true">&gt;</span> SYSTEM BOOT_
         </div>
         <div class="intro-line" data-delay="900">
-          <span class="intro-prefix">&gt;</span> initializing chatroom_v0.7.1...
+          <span class="intro-prefix" aria-hidden="true">&gt;</span> initializing chatroom_v0.7.1...
         </div>
         <div class="intro-line" data-delay="1600">
-          <span class="intro-prefix">&gt;</span> scanning global frequencies
+          <span class="intro-prefix" aria-hidden="true">&gt;</span> scanning global frequencies
         </div>
         <div class="intro-line" data-delay="2400">
-          <span class="intro-prefix">&gt;</span> 7 slots detected
+          <span class="intro-prefix" aria-hidden="true">&gt;</span> 7 slots detected
         </div>
         <div class="intro-line" data-delay="3200">
-          <span class="intro-prefix">&gt;</span> searching for signal...
+          <span class="intro-prefix" aria-hidden="true">&gt;</span> searching for signal...
         </div>
         <div class="intro-line intro-highlight" data-delay="4200">
-          <span class="intro-prefix">&gt;</span> connection established.
+          <span class="intro-prefix" aria-hidden="true">&gt;</span> connection established.
         </div>
         <div class="intro-line intro-welcome" data-delay="5200">
           welcome to the 7th Room.
@@ -190,7 +191,7 @@
       <p class="hero-system-msg mono" aria-hidden="true">[SYSTEM] connection established...</p>
       <h1 class="hero-title glitch" data-text="Are you ready to be found?">Are you ready to be found?</h1>
       <p class="hero-subtitle">We're looking for connection.</p>
-      <div class="hero-slots mono" aria-label="3 of 7 audition slots remaining">
+      <div class="hero-slots mono" role="img" aria-label="3 of 7 audition slots remaining">
         <span class="slot-indicator">[</span>
         <span class="slot-count" id="slotCount">3</span>
         <span class="slot-indicator"> of 7 slots remaining...]</span>
@@ -235,19 +236,19 @@
           <p class="about-text accent-text">"Somewhere, someone is waiting to find you."</p>
           <div class="values-grid">
             <div class="value-item">
-              <span class="value-icon">◇</span>
+              <span class="value-icon" aria-hidden="true">◇</span>
               <span class="value-label">Connection</span>
             </div>
             <div class="value-item">
-              <span class="value-icon">◇</span>
+              <span class="value-icon" aria-hidden="true">◇</span>
               <span class="value-label">Authenticity</span>
             </div>
             <div class="value-item">
-              <span class="value-icon">◇</span>
+              <span class="value-icon" aria-hidden="true">◇</span>
               <span class="value-label">Vulnerability</span>
             </div>
             <div class="value-item">
-              <span class="value-icon">◇</span>
+              <span class="value-icon" aria-hidden="true">◇</span>
               <span class="value-label">Belonging</span>
             </div>
           </div>
@@ -256,7 +257,7 @@
           <div class="chatroom-window win-frame">
             <div class="chatroom-header win-titlebar">
               <span class="chatroom-title">7thRoom Chat v0.7.1</span>
-              <div class="window-controls win-controls">
+              <div class="window-controls win-controls" aria-hidden="true">
                 <span class="win-btn">_</span>
                 <span class="win-btn">□</span>
                 <span class="win-btn close">×</span>
@@ -285,37 +286,37 @@
       <p class="section-subtitle reveal">Every voice matters. Every story counts. Choose the path that feels like yours.</p>
       <div class="categories-grid">
         <div class="category-card glass reveal">
-          <div class="category-icon">🎤</div>
+          <div class="category-icon" aria-hidden="true">🎤</div>
           <h3 class="category-title">Vocal</h3>
           <p class="category-desc">Your voice tells a story before the lyrics even begin.</p>
           <span class="category-slot mono">[SLOT ?/7]</span>
         </div>
         <div class="category-card glass reveal">
-          <div class="category-icon">💃</div>
+          <div class="category-icon" aria-hidden="true">💃</div>
           <h3 class="category-title">Dance</h3>
           <p class="category-desc">Movement is language. Let your body speak what words can't.</p>
           <span class="category-slot mono">[SLOT ?/7]</span>
         </div>
         <div class="category-card glass reveal">
-          <div class="category-icon">🎙</div>
+          <div class="category-icon" aria-hidden="true">🎙&#xFE0F;</div>
           <h3 class="category-title">Rap</h3>
           <p class="category-desc">Words as weapons of truth. Raw, honest, unapologetic.</p>
           <span class="category-slot mono">[SLOT ?/7]</span>
         </div>
         <div class="category-card glass reveal">
-          <div class="category-icon">🎨</div>
+          <div class="category-icon" aria-hidden="true">🎨</div>
           <h3 class="category-title">Visual / Creative</h3>
           <p class="category-desc">The world needs your eye. Design, film, style, creation in any form.</p>
           <span class="category-slot mono">[SLOT ?/7]</span>
         </div>
         <div class="category-card glass reveal">
-          <div class="category-icon">🎹</div>
+          <div class="category-icon" aria-hidden="true">🎹</div>
           <h3 class="category-title">Songwriting / Producing</h3>
           <p class="category-desc">Build the sound. Write the feeling. Shape what others will hear.</p>
           <span class="category-slot mono">[SLOT ?/7]</span>
         </div>
         <div class="category-card glass reveal">
-          <div class="category-icon">✦</div>
+          <div class="category-icon" aria-hidden="true">✦</div>
           <h3 class="category-title">All-Rounder</h3>
           <p class="category-desc">You can't be boxed in. Show us everything you are.</p>
           <span class="category-slot mono">[SLOT ?/7]</span>
@@ -509,7 +510,7 @@
             <div class="file-upload" id="fileUpload">
               <input type="file" id="photo" name="photo" class="file-input" accept="image/jpeg,image/png,image/webp">
               <div class="file-upload-label">
-                <span class="file-upload-icon">↑</span>
+                <span class="file-upload-icon" aria-hidden="true">↑</span>
                 <span class="file-upload-text">Drop your photo here or click to browse</span>
                 <span class="file-upload-hint mono">JPG, PNG or WebP, up to 10MB, unedited preferred</span>
               </div>
@@ -573,7 +574,7 @@
       <div class="faq-list">
         <details class="faq-item glass reveal">
           <summary class="faq-question">
-            <span class="faq-icon mono">&gt;</span>
+            <span class="faq-icon mono" aria-hidden="true">&gt;</span>
             Do I need training or experience?
           </summary>
           <div class="faq-answer">
@@ -582,7 +583,7 @@
         </details>
         <details class="faq-item glass reveal">
           <summary class="faq-question">
-            <span class="faq-icon mono">&gt;</span>
+            <span class="faq-icon mono" aria-hidden="true">&gt;</span>
             Can I apply from any country?
           </summary>
           <div class="faq-answer">
@@ -591,7 +592,7 @@
         </details>
         <details class="faq-item glass reveal">
           <summary class="faq-question">
-            <span class="faq-icon mono">&gt;</span>
+            <span class="faq-icon mono" aria-hidden="true">&gt;</span>
             What should my video look like?
           </summary>
           <div class="faq-answer">
@@ -600,7 +601,7 @@
         </details>
         <details class="faq-item glass reveal">
           <summary class="faq-question">
-            <span class="faq-icon mono">&gt;</span>
+            <span class="faq-icon mono" aria-hidden="true">&gt;</span>
             When will I hear back?
           </summary>
           <div class="faq-answer">
@@ -609,7 +610,7 @@
         </details>
         <details class="faq-item glass reveal">
           <summary class="faq-question">
-            <span class="faq-icon mono">&gt;</span>
+            <span class="faq-icon mono" aria-hidden="true">&gt;</span>
             Can I apply in multiple categories?
           </summary>
           <div class="faq-answer">
@@ -618,7 +619,7 @@
         </details>
         <details class="faq-item glass reveal">
           <summary class="faq-question">
-            <span class="faq-icon mono">&gt;</span>
+            <span class="faq-icon mono" aria-hidden="true">&gt;</span>
             What happens after I am selected?
           </summary>
           <div class="faq-answer">
@@ -627,7 +628,7 @@
         </details>
         <details class="faq-item glass reveal">
           <summary class="faq-question">
-            <span class="faq-icon mono">&gt;</span>
+            <span class="faq-icon mono" aria-hidden="true">&gt;</span>
             Is there an age limit?
           </summary>
           <div class="faq-answer">
@@ -636,7 +637,7 @@
         </details>
         <details class="faq-item glass reveal">
           <summary class="faq-question">
-            <span class="faq-icon mono">&gt;</span>
+            <span class="faq-icon mono" aria-hidden="true">&gt;</span>
             What language should I apply in?
           </summary>
           <div class="faq-answer">
@@ -668,6 +669,6 @@
   </footer>
   <!-- connection established // chatroom v0.7.1 // not everyone will understand this -->
 
-  <script src="js/main.js?v=16"></script>
+  <script src="js/main.js?v=17"></script>
 </body>
 </html>

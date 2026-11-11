@@ -28,6 +28,7 @@
   --max-width: 1100px;
   --shadow-soft: 0 4px 20px rgba(153, 102, 255, 0.12);
   --shadow-glossy: 0 8px 32px rgba(255, 105, 180, 0.2), 0 2px 8px rgba(0, 0, 0, 0.06);
+  --cursor-link: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Cpath d='M6 2l10 8-4 1 3 7-2.5 1-3-7-3.5 3z' fill='%23ff69b4' stroke='%23d03a80' stroke-width='1'/%3E%3C/svg%3E") 6 2, pointer;
 }
 
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
@@ -54,6 +55,21 @@ body {
 a { color: var(--deep-blue); text-decoration: none; transition: color 0.2s; }
 a:hover { color: var(--hot-pink); }
 
+/* Pink arrow on everything that can be clicked. This is the only place a
+   control's cursor is set: a later `cursor: pointer` on a component would
+   bring the system hand back for that one control. Keep the list in step
+   with the touch-screen reset in the (pointer: coarse) block. */
+a, button, select, summary,
+.file-upload, .file-input,
+.checkbox-label, .checkbox-label input,
+.social-link {
+  cursor: var(--cursor-link);
+}
+/* The "Choose file" button inside the (invisible) file input sets its own
+   cursor. Separate rules: an unknown pseudo-element would void a whole list. */
+.file-input::file-selector-button { cursor: var(--cursor-link); }
+.file-input::-webkit-file-upload-button { cursor: var(--cursor-link); }
+
 /* Side padding grows to the notch / rounded-corner insets in landscape, so
    section backgrounds stay full-bleed while the content keeps clear */
 .container {
@@ -66,10 +82,13 @@ a:hover { color: var(--hot-pink); }
 .mono { font-family: var(--font-mono); }
 
 /* --- Glossy Glass Panel --- */
+/* Base look for the cards and the form. No backdrop-filter: every element
+   that uses it sets a 92% or fully white background of its own, so a blur
+   behind it could not be seen and only cost a compositing layer each. The
+   component rules below come later in the file and override these values
+   without needing !important. */
 .glass {
   background: rgba(255, 255, 255, 0.75);
-  -webkit-backdrop-filter: blur(16px);
-  backdrop-filter: blur(16px);
   border: 2px solid rgba(255, 255, 255, 0.8);
   border-radius: var(--radius);
   box-shadow: var(--shadow-glossy),
@@ -139,7 +158,6 @@ a:hover { color: var(--hot-pink); }
   background: linear-gradient(180deg, #ff8ec5 0%, #ff69b4 40%, #e8408a 100%);
   border: 2px solid #d03a80;
   border-radius: 30px;
-  cursor: pointer;
   position: relative;
   overflow: hidden;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
@@ -218,7 +236,7 @@ a:hover { color: var(--hot-pink); }
 html:not(.js) .intro-overlay { animation: failsafe-hide 0.4s ease 8s forwards; }
 html:not(.js) .reveal { animation: failsafe-show 0.4s ease 8s forwards; }
 @keyframes failsafe-hide { to { opacity: 0; visibility: hidden; } }
-@keyframes failsafe-show { to { opacity: 1; transform: none; } }
+@keyframes failsafe-show { to { opacity: 1; translate: none; scale: none; } }
 
 body.intro-active { overflow: hidden; }
 
@@ -360,7 +378,6 @@ body.intro-active { overflow: hidden; }
   border: 2px solid var(--lilac);
   padding: 8px 18px;
   border-radius: 20px;
-  cursor: pointer;
   text-transform: uppercase;
   letter-spacing: 2px;
   transition: all 0.25s;
@@ -486,6 +503,11 @@ body.intro-active { overflow: hidden; }
 }
 
 .nav-links a {
+  /* inline-block: the magnetic hover (main.js) moves the link with a
+     transform, which has no effect on an inline box. The line height keeps
+     the pill the 32px it was as an inline box. */
+  display: inline-block;
+  line-height: 16px;
   color: var(--text-light);
   font-size: 0.82rem;
   font-weight: 600;
@@ -507,7 +529,6 @@ body.intro-active { overflow: hidden; }
   display: none;
   background: none;
   border: none;
-  cursor: pointer;
   padding: 8px;
 }
 
@@ -655,6 +676,12 @@ body.intro-active { overflow: hidden; }
   overflow: hidden;
 }
 
+/* The content of a section always paints above its star decorations */
+.section > .container {
+  position: relative;
+  z-index: 1;
+}
+
 /* Floating star decorations on sections */
 .section::before,
 .section::after {
@@ -702,11 +729,23 @@ body.intro-active { overflow: hidden; }
       rgba(232, 244, 255, 0.5) 100%);
 }
 
+/* Line height 1.2 keeps a two-line heading together. The 0.25em of padding
+   above and below gives back what the inherited 1.7 used to add, so the
+   space around a one-line heading is unchanged. */
 .section-title {
   font-size: clamp(1.8rem, 4vw, 2.8rem);
   font-weight: 700;
+  line-height: 1.2;
+  padding: 0.25em 0;
   margin-bottom: 12px;
   text-align: center;
+}
+
+/* Headings without a subtitle (Requirements, FAQ) keep a clear gap to the
+   cards below; the other sections get theirs from .section-subtitle */
+.section-title + .requirements-grid,
+.section-title + .faq-list {
+  margin-top: 38px;
 }
 
 .section-subtitle {
@@ -726,6 +765,12 @@ body.intro-active { overflow: hidden; }
 
 /* Let the columns shrink below their content's intrinsic width (chat input) */
 .about-grid > * { min-width: 0; }
+
+/* Two-column layout: the heading shares the left edge of the copy under it.
+   Stacked (768px and below) it stays centred like every other heading. */
+@media (min-width: 769px) {
+  .about-content .section-title { text-align: left; }
+}
 
 .about-text {
   font-size: 1rem;
@@ -871,7 +916,6 @@ body.intro-active { overflow: hidden; }
   color: white;
   font-size: 0.72rem;
   font-weight: 700;
-  cursor: pointer;
   text-transform: uppercase;
   letter-spacing: 1px;
   transition: background 0.2s;
@@ -886,13 +930,6 @@ body.intro-active { overflow: hidden; }
   font-weight: 700;
 }
 
-/* Pointer cursor for clickable elements */
-a, button, .nav-toggle, .faq-question, .category-card,
-.chatroom-send, .btn-glossy, .btn-submit, .btn-modal-close,
-.intro-skip, .social-link, select, .file-upload {
-  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Cpath d='M6 2l10 8-4 1 3 7-2.5 1-3-7-3.5 3z' fill='%23ff69b4' stroke='%23d03a80' stroke-width='1'/%3E%3C/svg%3E") 6 2, pointer;
-}
-
 /* ===================== CATEGORIES ===================== */
 .categories-grid {
   display: grid;
@@ -902,10 +939,17 @@ a, button, .nav-toggle, .faq-question, .category-card,
 
 .category-card {
   padding: 28px 24px;
-  background: rgba(255, 255, 255, 0.92) !important;
-  border: 2px solid rgba(255, 105, 180, 0.25) !important;
-  border-radius: var(--radius) !important;
-  transition: all 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  background: rgba(255, 255, 255, 0.92);
+  border: 2px solid rgba(255, 105, 180, 0.25);
+  border-radius: var(--radius);
+  /* Hover / tilt easing. Declared as a variable so the scroll-reveal rule
+     (.reveal, further down) can add it to its own transition list instead
+     of replacing it. */
+  --hover-transition:
+    transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    box-shadow 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    border-color 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  transition: var(--hover-transition);
   box-shadow:
     0 4px 16px rgba(153, 102, 255, 0.1),
     0 1px 3px rgba(0, 0, 0, 0.04),
@@ -956,7 +1000,7 @@ a, button, .nav-toggle, .faq-question, .category-card,
     0 16px 40px rgba(255, 20, 147, 0.25),
     0 6px 16px rgba(153, 102, 255, 0.15),
     inset 0 1px 0 rgba(255, 255, 255, 0.9);
-  border-color: var(--hot-pink) !important;
+  border-color: var(--hot-pink);
 }
 
 .category-card:hover::before { left: 100%; }
@@ -985,25 +1029,37 @@ a, button, .nav-toggle, .faq-question, .category-card,
 .category-slot {
   font-size: 0.7rem;
   color: var(--text-light);
-  opacity: 0.5;
   letter-spacing: 1px;
 }
 
 /* ===================== REQUIREMENTS ===================== */
 .requirements-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: 20px;
+}
+
+/* Too narrow for three 300px cards: two columns, and the third card takes
+   the full second row instead of sitting alone at half width */
+@media (max-width: 987px) {
+  .requirements-grid { grid-template-columns: repeat(2, 1fr); }
+  .req-card:last-child:nth-child(odd) { grid-column: 1 / -1; }
+}
+
+/* Too narrow for two: one column */
+@media (max-width: 667px) {
+  .requirements-grid { grid-template-columns: 1fr; }
 }
 
 .req-card {
   padding: 28px 24px;
-  background: rgba(255, 255, 255, 0.92) !important;
-  border: 2px solid rgba(255, 255, 255, 0.7) !important;
+  background: rgba(255, 255, 255, 0.92);
+  border: 2px solid rgba(255, 255, 255, 0.7);
   box-shadow: var(--shadow-glossy), inset 0 1px 0 rgba(255, 255, 255, 0.9);
   position: relative;
   overflow: hidden;
-  transition: transform 0.3s, box-shadow 0.3s;
+  --hover-transition: transform 0.3s, box-shadow 0.3s;
+  transition: var(--hover-transition);
 }
 
 .req-card::before {
@@ -1078,7 +1134,10 @@ a, button, .nav-toggle, .faq-question, .category-card,
   border: 2px solid rgba(255, 255, 255, 0.7);
   border-radius: var(--radius);
   box-shadow: var(--shadow-soft);
-  transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --hover-transition:
+    transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    box-shadow 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  transition: var(--hover-transition);
 }
 
 .timeline-step:hover {
@@ -1127,13 +1186,11 @@ a, button, .nav-toggle, .faq-question, .category-card,
   font-size: 0.7rem;
   letter-spacing: 1px;
   color: var(--text-light);
-  opacity: 0.5;
   padding-top: 4px;
 }
 
 .timeline-step.active .step-status {
   color: var(--hot-pink);
-  opacity: 1;
 }
 
 .timeline-connector {
@@ -1150,11 +1207,11 @@ a, button, .nav-toggle, .faq-question, .category-card,
   max-width: 800px;
   margin: 0 auto;
   padding: 0;
-  border: 2px solid #7eb4ea !important;
-  border-radius: 10px 10px 6px 6px !important;
+  border: 2px solid #7eb4ea;
+  border-radius: 10px 10px 6px 6px;
   overflow: hidden;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  background: white !important;
+  background: white;
 }
 
 .application-form::before {
@@ -1261,7 +1318,6 @@ select.form-input option { color: var(--text); }
   text-align: center;
   transition: all 0.25s;
   background: #fafcff;
-  cursor: pointer;
 }
 
 .file-upload:hover, .file-upload.dragover {
@@ -1292,7 +1348,6 @@ select.form-input option { color: var(--text); }
   position: absolute;
   inset: 0;
   opacity: 0;
-  cursor: pointer;
 }
 
 .file-upload-icon {
@@ -1313,7 +1368,6 @@ select.form-input option { color: var(--text); }
 .file-upload-hint {
   font-size: 0.72rem;
   color: var(--text-light);
-  opacity: 0.6;
   display: block;
   margin-top: 4px;
 }
@@ -1323,7 +1377,6 @@ select.form-input option { color: var(--text); }
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  cursor: pointer;
   font-size: 0.85rem;
   line-height: 1.5;
   color: var(--text-light);
@@ -1353,7 +1406,6 @@ select.form-input option { color: var(--text); }
   background: linear-gradient(180deg, #ff8ec5 0%, #ff69b4 40%, #e8408a 100%);
   border: 2px solid #d03a80;
   border-radius: 30px;
-  cursor: pointer;
   position: relative;
   overflow: hidden;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
@@ -1478,7 +1530,6 @@ select.form-input option { color: var(--text); }
   background: linear-gradient(180deg, #4fadff, #2878d8);
   border: 2px solid #1a5fcc;
   border-radius: 20px;
-  cursor: pointer;
   box-shadow: 0 3px 10px rgba(40, 120, 216, 0.3),
     inset 0 1px 0 rgba(255, 255, 255, 0.3);
   transition: all 0.2s;
@@ -1498,27 +1549,27 @@ select.form-input option { color: var(--text); }
 }
 
 .faq-item {
-  background: rgba(255, 255, 255, 0.92) !important;
-  border: 2px solid rgba(255, 255, 255, 0.7) !important;
-  border-radius: var(--radius) !important;
+  background: rgba(255, 255, 255, 0.92);
+  border: 2px solid rgba(255, 255, 255, 0.7);
+  border-radius: var(--radius);
   box-shadow: var(--shadow-soft);
   overflow: hidden;
-  transition: box-shadow 0.3s, transform 0.3s, border-color 0.3s;
+  --hover-transition: box-shadow 0.3s, transform 0.3s, border-color 0.3s;
+  transition: var(--hover-transition);
 }
 
 .faq-item:hover {
   transform: translateX(4px);
-  border-color: rgba(255, 105, 180, 0.3) !important;
+  border-color: rgba(255, 105, 180, 0.3);
 }
 
 .faq-item[open] {
-  border-color: rgba(255, 20, 147, 0.2) !important;
+  border-color: rgba(255, 20, 147, 0.2);
   box-shadow: var(--shadow-glossy);
 }
 
 .faq-question {
   padding: 16px 20px;
-  cursor: pointer;
   font-weight: 700;
   font-size: 0.95rem;
   color: var(--text);
@@ -1550,6 +1601,10 @@ select.form-input option { color: var(--text); }
 
 /* ===================== FOOTER ===================== */
 .footer {
+  /* The footer's lilac tint is darker than the white cards, so its small
+     muted text (tagline, copyright) uses a slightly deeper shade of
+     --text-light to stay at 4.5:1 or better */
+  --text-light: #725f88;
   padding: 56px 0 calc(36px + env(safe-area-inset-bottom));
   background:
     radial-gradient(ellipse at 30% 50%, rgba(255, 105, 180, 0.06) 0%, transparent 50%),
@@ -1573,6 +1628,9 @@ select.form-input option { color: var(--text); }
   text-align: center;
   font-size: 0.8rem;
   letter-spacing: 24px;
+  /* letter-spacing is also added after the last star; the same amount in
+     front keeps the row on the centre line */
+  padding-left: 24px;
   color: var(--hot-pink);
   opacity: 0.15;
   pointer-events: none;
@@ -1613,7 +1671,6 @@ select.form-input option { color: var(--text); }
 .footer-copy {
   font-size: 0.78rem;
   color: var(--text-light);
-  opacity: 0.6;
 }
 
 .footer-lore {
@@ -1631,8 +1688,13 @@ select.form-input option { color: var(--text); }
   -webkit-text-fill-color: initial !important;
 }
 
+/* main.js sizes and offsets each word's gradient (inline background-size /
+   background-position) so the words sample one gradient that runs across
+   the whole heading, like the hero title. Without that every word simply
+   carries the full gradient. */
 .text-reveal-ready.gradient-text .word-reveal {
   background: linear-gradient(135deg, var(--hot-pink), var(--purple), var(--deep-blue));
+  background-repeat: no-repeat;
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -1666,17 +1728,33 @@ select.form-input option { color: var(--text); }
 }
 
 /* ===================== SCROLL REVEAL (Apple-style) ===================== */
+/* The slide-in uses the individual `translate` and `scale` properties, not
+   `transform`, so a card's own hover transform (and the JS tilt / magnetic /
+   parallax effects, which write an inline transform) keep working on
+   elements that also carry .reveal. Browsers without these properties
+   (before Safari 14.1) just fade in without the slide.
+   This rule must stay after the component rules: it has the same
+   specificity as .category-card, .req-card, .timeline-step and .faq-item
+   and has to win `transition`. Each of those declares its hover easing in
+   --hover-transition, which is appended here, so neither is lost.
+   The same three properties are neutralised in the <noscript> style in
+   index.html, in the failsafe-show keyframes and in the reduced-motion
+   block: change them together. */
 .reveal {
   opacity: 0;
-  transform: translateY(40px) scale(0.97);
+  translate: 0 40px;
+  scale: 0.97;
   transition:
     opacity 0.9s cubic-bezier(0.25, 0.46, 0.45, 0.94),
-    transform 0.9s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    translate 0.9s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    scale 0.9s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    var(--hover-transition, visibility 0s);
 }
 
 .reveal.visible {
   opacity: 1;
-  transform: translateY(0) scale(1);
+  translate: none;
+  scale: none;
 }
 
 /* Hero content fades on scroll */
@@ -1706,8 +1784,11 @@ select.form-input option { color: var(--text); }
 }
 
 /* ===================== SPARKLE TRAIL ===================== */
+/* Fixed to the viewport (main.js positions it with clientX / clientY): an
+   absolutely positioned sparkle near the bottom or right edge of the page
+   made the document longer and wider while it lived */
 .sparkle-trail {
-  position: absolute;
+  position: fixed;
   pointer-events: none;
   z-index: 9998;
   opacity: 0.8;
@@ -1781,17 +1862,23 @@ select.form-input option { color: var(--text); }
 
 /* ===================== SECTION DIVIDERS ===================== */
 .section-divider {
+  --divider-gap: 16px;
   text-align: center;
-  padding: 0;
+  /* letter-spacing is also added after the last symbol; the same amount in
+     front keeps the row on the centre line */
+  padding: 0 0 0 var(--divider-gap);
   margin: -30px 0;
   position: relative;
   z-index: 2;
   font-size: 1rem;
-  letter-spacing: 16px;
+  letter-spacing: var(--divider-gap);
   color: var(--hot-pink);
   opacity: 0.25;
   pointer-events: none;
   line-height: 1;
+  /* Always a single row; the gap shrinks on phones so all nine symbols fit */
+  white-space: nowrap;
+  overflow: hidden;
 }
 
 /* ===================== RESPONSIVE ===================== */
@@ -1849,6 +1936,15 @@ select.form-input option { color: var(--text); }
   .about-grid { grid-template-columns: 1fr; gap: 32px; }
   .form-grid { grid-template-columns: 1fr; }
   .section { padding: 70px 0; }
+  /* Star decorations: placed for the 100px desktop padding, they landed on
+     the cards and buttons here. Keep them in the band between the divider
+     row (ends 30px from the section edge) and the content (starts at 70px). */
+  .section::before,
+  .section::after { line-height: 1; }
+  .section.deco-a::before,
+  .section.deco-b::before { top: 38px; }
+  .section.deco-a::after,
+  .section.deco-b::after { bottom: 38px; }
   .values-grid { grid-template-columns: 1fr; }
 
   .timeline-step {
@@ -1880,6 +1976,18 @@ select.form-input option { color: var(--text); }
   .nav-links > li:last-child { margin-bottom: 0; }
 }
 
+/* Landscape phones: a gap between the navbar and the first hero line, and
+   tighter spacing so the Enter button is on the first screen */
+@media (max-height: 480px) and (orientation: landscape) {
+  .hero {
+    padding-top: calc(var(--nav-height) + env(safe-area-inset-top) + 16px);
+    padding-bottom: 24px;
+  }
+  .hero-system-msg { margin-bottom: 8px; }
+  .hero-subtitle { margin-bottom: 12px; }
+  .hero-slots { margin-bottom: 16px; }
+}
+
 /* Short viewports: smaller chat pane (still a fixed height) and a modal
    that fits on screen */
 @media (max-height: 480px) {
@@ -1899,17 +2007,24 @@ select.form-input option { color: var(--text); }
   .hero-title { font-size: 1.8rem; }
   .section-title { font-size: 1.5rem; }
   .categories-grid { grid-template-columns: 1fr; }
-  .requirements-grid { grid-template-columns: 1fr; }
+  .section-divider { --divider-gap: 8px; }
+}
+
+@media (max-width: 340px) {
+  .section-divider { --divider-gap: 6px; }
 }
 
 /* Disable custom cursors on touch devices */
 @media (pointer: coarse) {
   body,
-  a, button, .nav-toggle, .faq-question, .category-card,
-  .chatroom-send, .btn-glossy, .btn-submit, .btn-modal-close,
-  .intro-skip, .social-link, select, .file-upload {
+  a, button, select, summary,
+  .file-upload, .file-input,
+  .checkbox-label, .checkbox-label input,
+  .social-link {
     cursor: auto !important;
   }
+  .file-input::file-selector-button { cursor: auto !important; }
+  .file-input::-webkit-file-upload-button { cursor: auto !important; }
 
   .sparkle-trail { display: none !important; }
 
@@ -1955,6 +2070,12 @@ select.form-input option { color: var(--text); }
   .intro-overlay { transition: opacity 0.3s ease !important; }
   .modal-overlay { transition: opacity 0.2s ease !important; }
   .form-input { transition: border-color 0.2s, box-shadow 0.2s !important; }
-  .reveal { transition: opacity 0.3s ease !important; transform: none !important; }
+  /* No slide-in (translate / scale) and no hover lift (transform) */
+  .reveal {
+    transition: opacity 0.3s ease !important;
+    translate: none !important;
+    scale: none !important;
+    transform: none !important;
+  }
   .word-reveal { transition: opacity 0.3s ease !important; transform: none !important; }
 }
