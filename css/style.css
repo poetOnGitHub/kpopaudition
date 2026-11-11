@@ -32,7 +32,13 @@
 
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
-html { scroll-behavior: smooth; font-size: 16px; }
+html {
+  scroll-behavior: smooth;
+  font-size: 16px;
+  /* Anchor targets (/#apply), focused fields and scrollIntoView stop below
+     the fixed navbar, the same place the menu links scroll to */
+  scroll-padding-top: calc(var(--nav-height) + env(safe-area-inset-top));
+}
 
 body {
   font-family: var(--font-body);
@@ -42,15 +48,21 @@ body {
   line-height: 1.7;
   overflow-x: hidden;
   min-height: 100vh;
-  padding-left: env(safe-area-inset-left);
-  padding-right: env(safe-area-inset-right);
   cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Cline x1='12' y1='2' x2='12' y2='22' stroke='%23ff69b4' stroke-width='1.5'/%3E%3Cline x1='2' y1='12' x2='22' y2='12' stroke='%23ff69b4' stroke-width='1.5'/%3E%3Ccircle cx='12' cy='12' r='3' fill='none' stroke='%23ff69b4' stroke-width='1.5'/%3E%3Ccircle cx='12' cy='12' r='1' fill='%23ff69b4'/%3E%3C/svg%3E") 12 12, crosshair;
 }
 
 a { color: var(--deep-blue); text-decoration: none; transition: color 0.2s; }
 a:hover { color: var(--hot-pink); }
 
-.container { max-width: var(--max-width); margin: 0 auto; padding: 0 24px; }
+/* Side padding grows to the notch / rounded-corner insets in landscape, so
+   section backgrounds stay full-bleed while the content keeps clear */
+.container {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 0 24px;
+  padding-left: max(24px, env(safe-area-inset-left));
+  padding-right: max(24px, env(safe-area-inset-right));
+}
 .mono { font-family: var(--font-mono); }
 
 /* --- Glossy Glass Panel --- */
@@ -189,10 +201,24 @@ a:hover { color: var(--hot-pink); }
   align-items: center;
   justify-content: center;
   touch-action: manipulation;
-  transition: opacity 0.8s ease;
+  /* visibility flips only once the fade has finished, so the fade is seen */
+  transition: opacity 0.8s ease, visibility 0s linear 0.8s;
 }
-.intro-overlay.fade-out { opacity: 0; visibility: hidden; }
+/* The page underneath is usable as soon as the fade starts */
+.intro-overlay.fade-out { opacity: 0; visibility: hidden; pointer-events: none; }
 .intro-overlay[hidden] { display: none; }
+/* The overlay only holds focus so key presses keep working during the boot
+   lines; it is not a control */
+.intro-overlay:focus { outline: none; }
+
+/* Failsafe for a script that never arrives (blocked or failed download; with
+   JavaScript switched off the <noscript> rules apply at once). main.js sets
+   .js on <html> as soon as it runs, which cancels both animations. Without
+   it the intro gets out of the way and the scroll-reveal content shows. */
+html:not(.js) .intro-overlay { animation: failsafe-hide 0.4s ease 8s forwards; }
+html:not(.js) .reveal { animation: failsafe-show 0.4s ease 8s forwards; }
+@keyframes failsafe-hide { to { opacity: 0; visibility: hidden; } }
+@keyframes failsafe-show { to { opacity: 1; transform: none; } }
 
 body.intro-active { overflow: hidden; }
 
@@ -204,6 +230,8 @@ body.intro-active { overflow: hidden; }
   align-items: center;
   justify-content: center;
   padding: 16px;
+  padding-left: max(16px, env(safe-area-inset-left));
+  padding-right: max(16px, env(safe-area-inset-right));
 }
 
 .intro-terminal {
@@ -245,7 +273,9 @@ body.intro-active { overflow: hidden; }
 
 /* Start prompt: centred inside the terminal card, which is still empty at
    that point. Anchoring it to the card (not to a viewport percentage) means
-   it can never end up behind the card or under the SKIP button. */
+   it can never end up behind the card or under the SKIP button.
+   It is a real <button> (first tab stop of the dialog), reset to look like
+   plain text. */
 .intro-enter {
   position: absolute;
   inset: 0;
@@ -254,13 +284,33 @@ body.intro-active { overflow: hidden; }
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  width: 100%;
+  height: 100%;
+  margin: 0;
   padding: 16px;
   text-align: center;
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  border-radius: 18px;
+  -webkit-appearance: none;
+  appearance: none;
   transition: opacity 0.4s;
 }
 .intro-enter.hidden { opacity: 0; pointer-events: none; }
+/* It holds focus from the start so Enter begins. The ring is kept back
+   until the keyboard is actually used to move around (main.js sets
+   .keyboard-nav on the first Tab), so the card looks the same as before for
+   everyone else. */
+.intro-enter:focus-visible { outline: none; }
+.intro-overlay.keyboard-nav .intro-enter:focus-visible {
+  outline: 2px dashed var(--lilac);
+  outline-offset: -10px;
+}
 
 .intro-enter-text {
+  display: block;
   font-family: var(--font-mono);
   font-size: 0.75rem;
   color: var(--text-light);
@@ -406,6 +456,8 @@ body.intro-active { overflow: hidden; }
   max-width: var(--max-width);
   margin: 0 auto;
   padding: 0 24px;
+  padding-left: max(24px, env(safe-area-inset-left));
+  padding-right: max(24px, env(safe-area-inset-right));
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -588,6 +640,7 @@ body.intro-active { overflow: hidden; }
   position: absolute;
   bottom: 32px;
   right: 40px;
+  right: max(40px, env(safe-area-inset-right));
   font-size: 0.7rem;
   color: var(--text-light);
   opacity: 0.4;
@@ -790,6 +843,10 @@ body.intro-active { overflow: hidden; }
   font-size: 0.8rem;
   color: var(--text);
 }
+
+/* Keyboard / click focus: same pink ring as the form fields */
+.chatroom-input-bar:focus-within { background: #fff; }
+.chatroom-input:focus { box-shadow: inset 0 0 0 2px var(--hot-pink); }
 
 .chatroom-input::placeholder {
   color: var(--text-light);
@@ -1119,6 +1176,9 @@ a, button, .nav-toggle, .faq-question, .category-card,
   padding: 32px;
 }
 
+/* Grid items may shrink below their content's intrinsic width, so one long
+   unbreakable word (a photo file name) cannot widen the whole column */
+.form-group { min-width: 0; }
 .form-group.full-width { grid-column: 1 / -1; }
 
 .form-label {
@@ -1147,6 +1207,18 @@ a, button, .nav-toggle, .faq-question, .category-card,
   transition: all 0.25s;
 }
 
+/* One height for every single-line control: native selects and date inputs
+   otherwise come out a couple of pixels taller than text inputs */
+.form-input:not(textarea) { height: 46px; }
+
+.form-input::placeholder { color: #757575; opacity: 1; }
+
+/* A dropdown still on its "Select..." entry reads as a placeholder. Two
+   separate rules: a browser without :has() must not drop the first one. */
+select.form-input:invalid { color: #757575; }
+select.form-input:has(option[value=""]:checked) { color: #757575; }
+select.form-input option { color: var(--text); }
+
 .form-input:focus {
   border-color: var(--hot-pink);
   box-shadow: 0 0 0 3px rgba(255, 20, 147, 0.1),
@@ -1164,6 +1236,15 @@ a, button, .nav-toggle, .faq-question, .category-card,
   color: #e04040;
   margin-top: 4px;
   display: block;
+}
+
+/* Short helper line under a field */
+.form-hint {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-light);
+  margin-top: 4px;
+  line-height: 1.4;
 }
 
 .form-textarea {
@@ -1194,6 +1275,13 @@ a, button, .nav-toggle, .faq-question, .category-card,
   background: rgba(0, 191, 255, 0.04);
 }
 
+/* The real file input is an invisible overlay, so the box shows its focus */
+.file-upload:focus-within {
+  border-color: var(--hot-pink);
+  box-shadow: 0 0 0 3px rgba(255, 20, 147, 0.1),
+    0 2px 8px rgba(255, 20, 147, 0.08);
+}
+
 /* Rejected photo: the real input is an invisible overlay, so the box shows it */
 .file-upload.error {
   border-color: #e04040;
@@ -1218,6 +1306,8 @@ a, button, .nav-toggle, .faq-question, .category-card,
   font-size: 0.88rem;
   color: var(--text-light);
   display: block;
+  /* The chosen file name goes here; long names without spaces must wrap */
+  overflow-wrap: anywhere;
 }
 
 .file-upload-hint {
@@ -1237,7 +1327,6 @@ a, button, .nav-toggle, .faq-question, .category-card,
   font-size: 0.85rem;
   line-height: 1.5;
   color: var(--text-light);
-  padding: 0 32px;
 }
 
 .checkbox-label input[type="checkbox"] {
@@ -1316,6 +1405,7 @@ a, button, .nav-toggle, .faq-question, .category-card,
   backdrop-filter: blur(8px);
   opacity: 0;
   transition: opacity 0.3s;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
 
 .modal-overlay.active { opacity: 1; }
@@ -1336,7 +1426,7 @@ a, button, .nav-toggle, .faq-question, .category-card,
 }
 
 .modal::before {
-  content: '[SYSTEM] Signal Received';
+  content: '7thRoom Transmission v1.0';
   display: block;
   background: linear-gradient(180deg, #4fadff, #2878d8, #2060c0, #58a0f0);
   padding: 7px 12px;
@@ -1570,7 +1660,7 @@ a, button, .nav-toggle, .faq-question, .category-card,
   height: 3px;
   width: 0%;
   background: linear-gradient(90deg, var(--hot-pink), var(--purple), var(--deep-blue));
-  z-index: 10000;
+  z-index: 1001;
   transition: width 0.1s linear;
   box-shadow: 0 0 8px rgba(255, 20, 147, 0.5);
 }
@@ -1595,6 +1685,8 @@ a, button, .nav-toggle, .faq-question, .category-card,
   z-index: 3;
   text-align: center;
   padding: 0 24px;
+  padding-left: max(24px, env(safe-area-inset-left));
+  padding-right: max(24px, env(safe-area-inset-right));
   will-change: transform, opacity;
   transition: opacity 0.1s, transform 0.1s;
 }
@@ -1727,7 +1819,7 @@ a, button, .nav-toggle, .faq-question, .category-card,
     gap: 16px;
     overflow-y: auto;
     overscroll-behavior: contain;
-    padding: 24px 0 calc(24px + env(safe-area-inset-bottom));
+    padding: 24px env(safe-area-inset-right) calc(24px + env(safe-area-inset-bottom)) env(safe-area-inset-left);
   }
 
   .nav-links.open {
@@ -1767,7 +1859,6 @@ a, button, .nav-toggle, .faq-question, .category-card,
 
   .hero-coordinates { display: none; }
 
-  .checkbox-label { padding: 0; }
   .btn-submit { width: calc(100% - 48px); margin: 0 24px 24px; }
   .form-grid { padding: 24px; }
 
@@ -1857,6 +1948,9 @@ a, button, .nav-toggle, .faq-question, .category-card,
     animation-iteration-count: 1 !important;
   }
   html { scroll-behavior: auto; }
+  /* The no-script failsafe must still wait for the script */
+  html:not(.js) .intro-overlay,
+  html:not(.js) .reveal { animation-delay: 8s !important; }
   /* Keep functional transitions (fades, state changes) but kill decorative ones */
   .intro-overlay { transition: opacity 0.3s ease !important; }
   .modal-overlay { transition: opacity 0.2s ease !important; }

@@ -15,6 +15,42 @@
     return prefersReducedMotion() ? 'auto' : 'smooth';
   }
 
+  // Keeps Tab / Shift+Tab inside `container` (an open dialog). Used as well
+  // as, or instead of, the inert attribute, which older Safari lacks.
+  function trapTabKey(e, container) {
+    if (e.key !== 'Tab') return;
+    var focusable = Array.prototype.filter.call(
+      container.querySelectorAll('a[href], button, input, select, textarea, [tabindex]:not([tabindex="-1"])'),
+      function (el) { return !el.disabled; }
+    );
+    if (!focusable.length) {
+      e.preventDefault();
+      return;
+    }
+    var first = focusable[0];
+    var last = focusable[focusable.length - 1];
+    var active = document.activeElement;
+    if (!container.contains(active)) {
+      e.preventDefault();
+      first.focus();
+    } else if (e.shiftKey && (active === first || active === container)) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && active === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  }
+
+  // Today's date in the visitor's own time zone, as YYYY-MM-DD (the format
+  // of a date input's value, so the two compare as strings)
+  function localDateString() {
+    var now = new Date();
+    return now.getFullYear() + '-' +
+      String(now.getMonth() + 1).padStart(2, '0') + '-' +
+      String(now.getDate()).padStart(2, '0');
+  }
+
   // Performance video links: any YouTube host (www., m., music., youtu.be)
   // or a Google Drive / Docs share link, http(s) only, with something after
   // the host. Parsed with URL so look-alike hosts (notyoutube.com,
@@ -153,19 +189,27 @@
     bar.className = 'scroll-progress';
     document.body.appendChild(bar);
 
+    function update() {
+      var docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      var progress = docHeight > 0 ? (window.scrollY / docHeight) * 100 : 0;
+      bar.style.width = Math.max(0, Math.min(100, progress)) + '%';
+    }
+
     var ticking = false;
-    window.addEventListener('scroll', function () {
+    function onScroll() {
       if (!ticking) {
         requestAnimationFrame(function () {
-          var scrollTop = window.scrollY;
-          var docHeight = document.documentElement.scrollHeight - window.innerHeight;
-          var progress = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
-          bar.style.width = progress + '%';
+          update();
           ticking = false;
         });
         ticking = true;
       }
-    }, { passive: true });
+    }
+    window.addEventListener('scroll', onScroll, { passive: true });
+    // The page height changes on rotation / resize
+    window.addEventListener('resize', onScroll);
+    // The page can already be scrolled when this runs (reload, /#apply link)
+    update();
   }
 
   // --- Parallax Depth on Sections ---
@@ -271,17 +315,21 @@
       activeLink = current;
     }
 
+    function updateNavState() {
+      if (window.scrollY > 50) {
+        navbar.classList.add('scrolled');
+      } else {
+        navbar.classList.remove('scrolled');
+      }
+      updateActiveLink();
+    }
+
     // Scroll effects (rAF-guarded)
     var navTicking = false;
     function onNavScroll() {
       if (!navTicking) {
         requestAnimationFrame(function () {
-          if (window.scrollY > 50) {
-            navbar.classList.add('scrolled');
-          } else {
-            navbar.classList.remove('scrolled');
-          }
-          updateActiveLink();
+          updateNavState();
           navTicking = false;
         });
         navTicking = true;
@@ -292,35 +340,54 @@
     // images have loaded
     window.addEventListener('resize', onNavScroll);
     window.addEventListener('load', onNavScroll);
-    updateActiveLink();
+    // The page can already be scrolled when this runs (reload, /#apply link)
+    updateNavState();
 
-    // Mobile toggle
+    // Mobile menu. Every way of leaving it goes through closeMenu(), so the
+    // page scroll lock can never outlive the menu.
+    function closeMenu() {
+      if (!navLinks.classList.contains('open')) return;
+      navLinks.classList.remove('open');
+      navToggle.classList.remove('open');
+      navToggle.setAttribute('aria-expanded', 'false');
+      document.body.style.overflow = '';
+    }
+
     navToggle.addEventListener('click', function () {
-      var isOpen = navLinks.classList.toggle('open');
-      navToggle.classList.toggle('open');
-      navToggle.setAttribute('aria-expanded', isOpen);
-      document.body.style.overflow = isOpen ? 'hidden' : '';
+      if (navLinks.classList.contains('open')) {
+        closeMenu();
+        return;
+      }
+      navLinks.classList.add('open');
+      navToggle.classList.add('open');
+      navToggle.setAttribute('aria-expanded', 'true');
+      document.body.style.overflow = 'hidden';
     });
 
-    // Close on link click
+    // Close on link click, and on the logo, which stays visible above the menu
     links.forEach(function (link) {
-      link.addEventListener('click', function () {
-        navLinks.classList.remove('open');
-        navToggle.classList.remove('open');
-        navToggle.setAttribute('aria-expanded', 'false');
-        document.body.style.overflow = '';
-      });
+      link.addEventListener('click', closeMenu);
     });
+    var logo = navbar.querySelector('.nav-logo');
+    if (logo) logo.addEventListener('click', closeMenu);
 
     // Escape closes mobile nav
     document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape' && navLinks.classList.contains('open')) {
-        navLinks.classList.remove('open');
-        navToggle.classList.remove('open');
-        navToggle.setAttribute('aria-expanded', 'false');
-        document.body.style.overflow = '';
-      }
+      if (e.key === 'Escape') closeMenu();
     });
+
+    // Rotating or resizing past the mobile breakpoint (the same query as in
+    // style.css) hides the menu button, so the menu must close with it
+    var mobileNav = window.matchMedia('(max-width: 768px)');
+    function onNavBreakpoint(e) {
+      if (!e.matches) closeMenu();
+    }
+    if (mobileNav.addEventListener) {
+      mobileNav.addEventListener('change', onNavBreakpoint);
+    } else if (mobileNav.addListener) {
+      // Safari before 14
+      mobileNav.addListener(onNavBreakpoint);
+    }
   }
 
   // --- Smooth Scroll ---
@@ -515,10 +582,15 @@
     var form = document.getElementById('applicationForm');
     if (!form) return;
 
-    // Set DOB max to today dynamically
+    // The script validates every field itself and shows the messages inline,
+    // so the browser's own bubbles are switched off. Done here, not with a
+    // novalidate attribute, so native validation still works without script.
+    form.noValidate = true;
+
+    // Date picker stops at today (the rule itself is checked in validateField)
     var dobInput = document.getElementById('dob');
     if (dobInput) {
-      dobInput.max = new Date().toISOString().split('T')[0];
+      dobInput.max = localDateString();
     }
 
     var charCount = document.getElementById('charCount');
@@ -626,8 +698,11 @@
       } else if (input.type === 'url' && input.value && !isAllowedVideoUrl(input.value)) {
         msg = 'Please use a YouTube or Google Drive link (https://...)';
       } else if (input.id === 'dob' && input.value) {
-        var dob = new Date(input.value);
-        if (dob < new Date('2005-01-01')) {
+        // The value is YYYY-MM-DD, so plain string comparison is exact and
+        // has no time-zone edge. A year of more than four digits is longer.
+        if (input.value.length > 10 || input.value > localDateString()) {
+          msg = 'Date of birth cannot be in the future.';
+        } else if (input.value < '2005-01-01') {
           msg = 'You must be born in 2005 or later.';
         }
       }
@@ -637,10 +712,12 @@
       var box = isFile && fileUpload ? fileUpload : input;
       if (msg) {
         box.classList.add('error');
+        input.setAttribute('aria-invalid', 'true');
         if (errorEl) errorEl.textContent = msg;
         return false;
       } else {
         box.classList.remove('error');
+        input.removeAttribute('aria-invalid');
         if (errorEl) errorEl.textContent = '';
         return true;
       }
@@ -776,8 +853,12 @@
     });
 
     document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape' && modalOpen) {
+      if (!modalOpen) return;
+      if (e.key === 'Escape') {
         closeModal();
+      } else {
+        // Tab stays inside the dialog
+        trapTabKey(e, modal);
       }
     });
   }
@@ -845,16 +926,34 @@
     var overlay = document.getElementById('introOverlay');
     var skipBtn = document.getElementById('introSkip');
     var enterPrompt = document.getElementById('introEnter');
-    if (!overlay) { initMain(); return; }
+    var root = document.documentElement;
+    if (!overlay) { root.classList.add('js'); initMain(); return; }
+
+    // style.css hides the overlay by itself when this script has not shown
+    // up after a few seconds. If that has already happened the visitor is
+    // looking at the page, so the intro is not sprung on them now.
+    var failsafeFired = window.getComputedStyle(overlay).visibility === 'hidden';
+    // From here on the script is in charge (cancels the CSS failsafe)
+    root.classList.add('js');
 
     // Skip intro for reduced motion preference
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    if (failsafeFired || prefersReducedMotion()) {
       overlay.hidden = true;
       initMain();
       return;
     }
 
     document.body.classList.add('intro-active');
+
+    // The overlay is a modal dialog: while it is up, nothing behind it can
+    // be focused or operated. Set here, not in the markup, so a script
+    // failure cannot leave the page inert.
+    var inertEls = [];
+    Array.prototype.forEach.call(document.body.children, function (el) {
+      if (el === overlay || el.tagName === 'SCRIPT' || el.hasAttribute('inert')) return;
+      el.setAttribute('inert', '');
+      inertEls.push(el);
+    });
 
     // Touch devices have nothing to click and no Enter key
     var enterText = enterPrompt && enterPrompt.querySelector('.intro-enter-text');
@@ -866,6 +965,9 @@
     var audioCtx = null;
     var introComplete = false;
     var sequenceStarted = false;
+
+    // Focus starts on the "begin" button; SKIP is the next tab stop
+    if (enterPrompt) enterPrompt.focus({ preventScroll: true });
 
     function playTone(freq, duration, volume, type) {
       if (!audioCtx || audioCtx.state !== 'running') return;
@@ -946,8 +1048,14 @@
       if (sequenceStarted) return;
       sequenceStarted = true;
 
-      // Hide the "click to enter" prompt
-      if (enterPrompt) enterPrompt.classList.add('hidden');
+      // Hide the "click to enter" prompt and take it out of the tab order.
+      // Focus moves to the dialog itself, so Escape and Tab (to SKIP) keep
+      // working while the boot lines play.
+      if (enterPrompt) {
+        enterPrompt.classList.add('hidden');
+        if (document.activeElement === enterPrompt) overlay.focus({ preventScroll: true });
+        enterPrompt.disabled = true;
+      }
 
       // Create AudioContext inside user gesture, wait for it to be running
       try {
@@ -969,6 +1077,11 @@
     function finishIntro() {
       if (introComplete) return;
       introComplete = true;
+      // Hand the page back before the fade: nothing in the overlay can be
+      // focused any more and everything behind it can
+      if (overlay.contains(document.activeElement)) document.activeElement.blur();
+      overlay.setAttribute('inert', '');
+      inertEls.forEach(function (el) { el.removeAttribute('inert'); });
       overlay.classList.add('fade-out');
       document.body.classList.remove('intro-active');
       setTimeout(function () {
@@ -989,10 +1102,23 @@
       finishIntro();
     });
 
-    // Escape skips
+    // Escape skips; Enter / Space begin; Tab stays inside the dialog
     document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape' && !introComplete) finishIntro();
-      if ((e.key === 'Enter' || e.key === ' ') && !sequenceStarted && !introComplete) {
+      if (introComplete) return;
+      if (e.key === 'Escape') {
+        finishIntro();
+        return;
+      }
+      if (e.key === 'Tab') {
+        // From now on the focus ring of the "begin" prompt is shown too
+        overlay.classList.add('keyboard-nav');
+        trapTabKey(e, overlay);
+        return;
+      }
+      if ((e.key === 'Enter' || e.key === ' ') && !sequenceStarted) {
+        // On a focused button the key belongs to that button: its own click
+        // begins (the prompt) or skips (SKIP)
+        if (e.target && e.target.closest && e.target.closest('button, a[href]')) return;
         e.preventDefault();
         startSequence();
       }
@@ -1035,6 +1161,9 @@
     var nextThreadTimer = null;
     var chatStarted = false;
     var userMsgCount = 0;
+    // The room only "talks" while its window is on screen and the tab is
+    // showing. See chatPaused() / resumeChat().
+    var chatInView = false;
 
     // --- Memory & State ---
     var memory = {
@@ -1044,21 +1173,45 @@
       userCountry: null,    // if they share location
       userCategory: null,   // vocal/dance/rap etc
       messagesReceived: 0,
-      lastTopic: null
+      lastTopic: null,
+      nameGivenAt: 0,       // messagesReceived when the name was first given
+      nameFollowedUp: false // the one-off name follow-up has been shown
     };
+
+    function rememberName(name) {
+      memory.userName = name;
+      if (!memory.nameGivenAt) memory.nameGivenAt = memory.messagesReceived;
+    }
 
     // --- Eliza Reflection Map ---
-    // Flips pronouns/perspective so we can echo back naturally
+    // Flips first person to second person, word by word, so a room member
+    // can say the visitor's words back to them ("i am" -> "you are",
+    // "am i" -> "are you", "my" -> "your"). Written the way the room types:
+    // lower case, no apostrophes.
     var reflections = {
-      'i am': 'you are', 'i was': 'you were', 'i have': 'you have',
-      'i will': 'you will', 'i would': 'you would', 'i can': 'you can',
-      'my': 'your', 'me': 'you', 'myself': 'yourself',
-      'am': 'are', 'im': 'youre'
+      'i': 'you', 'me': 'you', 'my': 'your', 'mine': 'yours',
+      'myself': 'yourself', 'am': 'are',
+      'im': 'youre', "i'm": 'youre', 'ive': 'youve', "i've": 'youve',
+      "i'll": 'youll', "i'd": 'youd'
     };
 
+    // The visitor's message as it can be quoted mid-sentence: lower case,
+    // single spaces, no punctuation or quote marks at either end
+    function tidyEcho(text) {
+      return String(text).toLowerCase()
+        .replace(/[\u2018\u2019]/g, "'")
+        .replace(/\s+/g, ' ')
+        .replace(/^[\s.,!?;:~"'()\u201c\u201d-]+|[\s.,!?;:~"'()\u201c\u201d-]+$/g, '');
+    }
+
     function reflect(text) {
-      var words = text.toLowerCase().split(/\s+/);
-      return words.map(function (w) { return reflections[w] || w; }).join(' ');
+      // "was" only changes next to "i" ("it was late" stays as it is)
+      var clean = tidyEcho(text)
+        .replace(/\bi was\b/g, 'you were')
+        .replace(/\bwas i\b/g, 'were you');
+      return clean.replace(/[a-z']+/g, function (word) {
+        return Object.prototype.hasOwnProperty.call(reflections, word) ? reflections[word] : word;
+      });
     }
 
     // --- Template Engine ---
@@ -1147,7 +1300,7 @@
         // name; that form is handled further down, after the mood rules.
         regex: /\b(?:my name is|my name.?s|i.?m called|i am called|call me)\s+([^\s\d.,!?;:()"]+)/i,
         capture: function (m) { return cleanName(m[1]); },
-        onMatch: function (m, name) { memory.userName = name; },
+        onMatch: function (m, name) { rememberName(name); },
         system: ['[SYSTEM] Identity registered: {extract}.'],
         users: [
           'hi {extract}!! welcome to the room',
@@ -1242,7 +1395,7 @@
         // common describing word ("i am tired", "i am 17" are not names)
         regex: /\bi am\s+([^\s\d.,!?;:()"]+)(?=\s*(?:$|[.,!?~;:)]|(?:and|from|btw|lol)\b))/i,
         capture: function (m) { return cleanName(m[1]); },
-        onMatch: function (m, name) { memory.userName = name; },
+        onMatch: function (m, name) { rememberName(name); },
         system: ['[SYSTEM] Identity registered: {extract}.'],
         users: [
           'hi {extract}!! welcome to the room',
@@ -1332,11 +1485,18 @@
 
     // --- Context-Aware Follow-ups ---
     // After memory accumulates, system drops follow-ups based on what it knows
+    // Called for every message the visitor sends.
     function getContextFollowUp() {
-      var opts = [];
-      if (memory.userName && memory.messagesReceived === 2) {
-        opts.push('[SYSTEM] ' + memory.userName + ', your signal is getting stronger.');
+      // Once, with the first message after the one that gave the name (the
+      // name message itself already gets "Identity registered")
+      if (memory.userName && !memory.nameFollowedUp &&
+          memory.messagesReceived > memory.nameGivenAt) {
+        memory.nameFollowedUp = true;
+        return '[SYSTEM] ' + memory.userName + ', your signal is getting stronger.';
       }
+      // The rest only every third message
+      if (memory.messagesReceived % 3 !== 0) return null;
+      var opts = [];
       if (memory.userCategory && memory.messagesReceived === 3) {
         var cat = memory.userCategory;
         opts.push('[SYSTEM] ' + cat.charAt(0).toUpperCase() + cat.slice(1) + ' profile logged. Compatibility scan: running...');
@@ -1370,17 +1530,32 @@
     }
 
     // --- Fallback for unmatched input ---
-    // Uses reflection to echo the user's words back contextually
+    // Echoes the visitor's words back where that reads naturally: quoted as
+    // they were typed, or turned around ("i can sing" -> "you can sing")
+    // when the message is a statement about the visitor.
     function getFallbackResponse(text) {
-      var reflected = reflect(text);
+      var quote = tidyEcho(text);
+      var wordCount = quote ? quote.split(' ').length : 0;
       var templates = [
-        'wait... ' + reflected + '? tell us more about that',
-        'the way ' + reflected + '... i felt that in my soul',
-        'when you say ' + reflected + ' i think everyone here relates',
         'thats interesting. what made you think about that?',
-        'ok but ' + reflected + ' is such a mood',
         'i was literally just thinking about that too'
       ];
+      // Only short, single-sentence messages are echoed, and none that talk
+      // to the room ("are you real?"): those cannot be turned around safely
+      var echoable = wordCount >= 2 && wordCount <= 8 && quote.length <= 48 &&
+        !/[.!?]\s/.test(quote) &&
+        !/\b(?:you|your|yours|youre|you're|u|ur)\b/.test(quote);
+      if (echoable) {
+        templates.push('when you say "' + quote + '" i think everyone here relates');
+        templates.push('ok but "' + quote + '" is such a mood');
+        if (/^(?:i|im|i'm|ive|i've|i'll|i'd|my)\b/.test(quote)) {
+          var reflected = reflect(quote);
+          templates.push('wait... ' + reflected + '? tell us more about that');
+          templates.push('the way ' + reflected + '... i felt that in my soul');
+        } else {
+          templates.push('wait... "' + quote + '"? tell us more about that');
+        }
+      }
       return pickRandom(templates);
     }
 
@@ -1393,12 +1568,9 @@
     ];
 
     // --- Auto Conversation Threads ---
+    // (The room's opening "hello? is anyone here?" exchange is part of the
+    // boot sequence, so it is not repeated as a thread here.)
     var conversations = [
-      [
-        { text: 'hello? is anyone here?', pause: 1200 },
-        { text: 'omg yes!! hi!!', pause: 800 },
-        { text: 'wait how many people are in here right now', pause: 1000 }
-      ],
       [
         { text: 'is anyone else super nervous rn', pause: 900 },
         { text: 'literally shaking lol', pause: 700 },
@@ -1472,7 +1644,22 @@
     var handleIdx = 0;
     var cityIdx = 0;
 
+    function handleInUse(handle) {
+      return activeUsers.some(function (u) { return u.handle === handle; });
+    }
+
     function createUser() {
+      // Next handle that nobody in the room is using: once the list has been
+      // gone through it starts again, and a newcomer must not share a name
+      // with a member who is still here (there are more handles than members)
+      for (var tries = 0; tries <= handles.length; tries++) {
+        if (handleIdx >= shuffledHandles.length) {
+          shuffledHandles = shuffle(handles);
+          handleIdx = 0;
+        }
+        if (!handleInUse(shuffledHandles[handleIdx])) break;
+        handleIdx++;
+      }
       if (handleIdx >= shuffledHandles.length) {
         shuffledHandles = shuffle(handles);
         handleIdx = 0;
@@ -1491,14 +1678,56 @@
       return user;
     }
 
-    function getOrCreateUser() {
-      if (activeUsers.length > 0 && Math.random() > 0.35) {
-        return pickRandom(activeUsers);
+    // --- Auto-scroll ---
+    // The window follows new text only while the visitor is at the bottom.
+    // Scrolling up to reread lets go; coming back down takes hold again.
+    // The decision is made from the visitor's own scrolling (the scroll
+    // listener), never from the height of the line being added, so a new
+    // paragraph cannot switch following off by itself.
+    var stickToBottom = true;
+    var lastScrollTop = 0;
+
+    body.addEventListener('scroll', function () {
+      var top = body.scrollTop;
+      var fromBottom = body.scrollHeight - top - body.clientHeight;
+      if (fromBottom < 2) {
+        stickToBottom = true;
+      } else if (top < lastScrollTop) {
+        stickToBottom = false;
+      } else if (fromBottom < 40) {
+        stickToBottom = true;
       }
-      return createUser();
+      lastScrollTop = top;
+    }, { passive: true });
+
+    // force: always scroll (the visitor's own message)
+    function scrollChat(force) {
+      if (force) {
+        stickToBottom = true;
+      } else if (stickToBottom && body.scrollTop < lastScrollTop - 1) {
+        // The visitor has just scrolled up and the scroll event has not
+        // been delivered yet: do not pull them back down
+        stickToBottom = false;
+      }
+      if (!stickToBottom) return;
+      body.scrollTop = body.scrollHeight;
+      // Our own scroll is not the visitor scrolling
+      lastScrollTop = body.scrollTop;
     }
 
-    function scrollChat() { body.scrollTop = body.scrollHeight; }
+    var MAX_MESSAGES = 50;
+
+    // Cap the number of lines kept in the window
+    function trimMessages() {
+      var removed = false;
+      while (body.children.length >= MAX_MESSAGES) {
+        body.removeChild(body.firstChild);
+        removed = true;
+      }
+      // Dropping lines from the top moves the scroll position; that is not
+      // the visitor scrolling up either
+      if (removed) lastScrollTop = body.scrollTop;
+    }
 
     function typeText(el, text, speed, callback) {
       // Reduced motion: the line appears whole, then holds for about as long
@@ -1521,13 +1750,8 @@
       tick();
     }
 
-    var MAX_MESSAGES = 50;
-
     function addMessage(text, cssClass, typingSpeed, callback) {
-      // Cap DOM elements
-      while (body.children.length >= MAX_MESSAGES) {
-        body.removeChild(body.firstChild);
-      }
+      trimMessages();
       var p = document.createElement('p');
       p.className = 'chat-msg ' + cssClass;
       body.appendChild(p);
@@ -1577,8 +1801,26 @@
       processQueue();
     }
 
+    // --- Pausing ---
+    // Off screen, or in a background tab, the room goes quiet: no new line
+    // is started and no new conversation is scheduled. A line that is
+    // already typing finishes. Everything waiting stays in the queue
+    // (replies to the visitor included) and carries on from resumeChat().
+    function chatPaused() {
+      return !chatInView || document.hidden;
+    }
+
+    function resumeChat() {
+      if (!chatStarted || chatPaused() || queueBusy) return;
+      if (messageQueue.length > 0) {
+        processQueue();
+      } else {
+        scheduleNextConversation(800 + Math.random() * 700);
+      }
+    }
+
     function processQueue() {
-      if (queueBusy || messageQueue.length === 0) return;
+      if (queueBusy || chatPaused() || messageQueue.length === 0) return;
       // Claim the queue now, not when typing starts: the wait below must
       // not let a second line through
       queueBusy = true;
@@ -1591,6 +1833,12 @@
       var msg = pendingMsg;
       pendingMsg = null;
       pendingTimer = null;
+      if (chatPaused()) {
+        // Paused while waiting to start: back to the head of the queue
+        messageQueue.unshift(msg);
+        queueBusy = false;
+        return;
+      }
       if (msg.user) msg.user.shown = true;
       addMessage(msg.text, msg.cssClass, msg.speed, function () {
         queueBusy = false;
@@ -1603,19 +1851,28 @@
     }
 
     // When the room falls quiet, the next scripted conversation starts after
-    // a short lull
-    function scheduleNextConversation() {
-      if (nextThreadTimer !== null) return;
+    // a short lull (`lull` ms; a few seconds unless given)
+    function scheduleNextConversation(lull) {
+      if (nextThreadTimer !== null || chatPaused()) return;
       nextThreadTimer = setTimeout(function () {
         nextThreadTimer = null;
+        // Paused in the meantime: resumeChat() schedules again
+        if (chatPaused()) return;
         playNextConversation();
-      }, 4000 + Math.random() * 3000);
+      }, lull === undefined ? 4000 + Math.random() * 3000 : lull);
     }
 
-    function connectNewUser(delay) {
+    // A new room member, announced by a "[SYSTEM] ... connected" line that is
+    // queued now, so it always comes before their first message
+    function connectNewUser(delay, options) {
       var user = createUser();
+      options = options || {};
+      options.user = user;
+      // Announced as part of a reply: replies play in order, ahead of
+      // everything else, so later replies can already count on this member
+      if (options.reply) user.announced = true;
       queueMessage('[SYSTEM] ' + user.handle + ' connected from ' + user.city + '.', 'system', 16,
-        delay === undefined ? 400 : delay, { user: user });
+        delay === undefined ? 400 : delay, options);
       return user;
     }
 
@@ -1625,18 +1882,37 @@
       queueMessage(user.handle + ': ' + text, user.cssClass, 28, delay, options);
     }
 
-    // A room member for a reply to the visitor. Replies jump ahead of the
-    // scripted lines, so only members already seen in the room are reused;
-    // otherwise someone could speak before their own "connected" line.
-    function getReplyUser() {
-      var shown = activeUsers.filter(function (u) { return u.shown; });
-      if (shown.length > 0 && Math.random() > 0.35) return pickRandom(shown);
-      return createUser();
+    // A room member for a reply to the visitor, other than those in
+    // `exclude` (who have already replied to this message). Replies jump
+    // ahead of the scripted lines, so only members already seen in the room
+    // (or announced in an earlier reply) are reused; otherwise someone could
+    // speak before their own "connected" line. If nobody is left, a newcomer
+    // joins, announced as part of the reply.
+    function getReplyUser(exclude) {
+      var seen = activeUsers.filter(function (u) {
+        return (u.shown || u.announced) && exclude.indexOf(u) === -1;
+      });
+      if (seen.length > 0) return pickRandom(seen);
+      return connectNewUser(500, { reply: true });
     }
 
-    function playConversation(thread) {
-      thread.forEach(function (line) {
-        queueUserLine(getOrCreateUser(), line.text, line.pause || 800);
+    // Speaker for the next line of a scripted thread: never someone who has
+    // already spoken in it (`used`), so nobody answers their own question.
+    // Usually a member already in the room; now and then, or when everyone
+    // has had a turn, a newcomer who is announced first.
+    function pickThreadSpeaker(used) {
+      var free = activeUsers.filter(function (u) { return used.indexOf(u) === -1; });
+      if (free.length > 0 && Math.random() > 0.1) return pickRandom(free);
+      return connectNewUser();
+    }
+
+    // `opener`, if given, speaks the first line
+    function playConversation(thread, opener) {
+      var used = [];
+      thread.forEach(function (line, i) {
+        var user = (i === 0 && opener) ? opener : pickThreadSpeaker(used);
+        used.push(user);
+        queueUserLine(user, line.text, line.pause || 800);
       });
     }
 
@@ -1646,8 +1922,9 @@
         conversationIndex = 0;
       }
       var thread = conversations[conversationIndex++];
-      if (Math.random() > 0.5) connectNewUser();
-      playConversation(thread);
+      // Sometimes someone new joins and starts the conversation
+      var opener = Math.random() > 0.75 ? connectNewUser() : null;
+      playConversation(thread, opener);
     }
 
     // --- Eliza Input Processor ---
@@ -1688,19 +1965,19 @@
       queueMessage(systemMsg, 'system', 16, 300, { reply: true, notBefore: Date.now() + 1000 });
 
       // Reaction from a room member
-      queueUserLine(getReplyUser(), userReaction, 700, { reply: true });
+      var repliers = [getReplyUser([])];
+      queueUserLine(repliers[0], userReaction, 700, { reply: true });
 
-      // 50% chance second user chimes in with mood-based reaction
+      // 50% chance a second, different member chimes in with a mood-based reaction
       if (Math.random() > 0.5) {
-        queueUserLine(getReplyUser(), getMoodReaction(), 900, { reply: true });
+        queueUserLine(getReplyUser(repliers), getMoodReaction(), 900, { reply: true });
       }
 
-      // Every few messages, system drops a context-aware follow-up
-      if (memory.messagesReceived % 3 === 0) {
-        var followUp = getContextFollowUp();
-        if (followUp) {
-          queueMessage(followUp, 'system', 16, 900, { reply: true });
-        }
+      // Now and then the system drops a context-aware follow-up (it decides
+      // itself when one is due)
+      var followUp = getContextFollowUp();
+      if (followUp) {
+        queueMessage(followUp, 'system', 16, 900, { reply: true });
       }
     }
 
@@ -1719,7 +1996,10 @@
       queueUserLine(connectNewUser(1100), 'omg hi!! i thought i was alone', 900);
       queueUserLine(connectNewUser(1000), 'wait this is real?? how did you find this?', 800);
 
-      var slots = 3 + Math.floor(Math.random() * 3);
+      // The same number the hero shows
+      var slotEl = document.getElementById('slotCount');
+      var slots = slotEl ? parseInt(slotEl.textContent, 10) : NaN;
+      if (isNaN(slots)) slots = 3;
       queueMessage('[SYSTEM] ' + slots + ' of 7 slots remaining...', 'system', 16, 1200);
 
       // First scripted conversation follows straight on. After that, each
@@ -1732,15 +2012,22 @@
       var text = input.value.trim().substring(0, 120);
       if (!text) return;
       input.value = '';
+      // Clearing the value fires no input event, so the counter is reset
+      // here, for the Enter key and the Send button alike
+      if (chatCharEl) {
+        chatCharEl.textContent = '';
+        chatCharEl.classList.remove('visible');
+      }
 
       // The visitor's own message is shown at once, without waiting for the
       // line being typed; the replies to it are queued ahead of scripted lines
       var p = document.createElement('p');
       p.className = 'chat-msg user-you';
       p.textContent = 'you: ' + text;
-      while (body.children.length >= MAX_MESSAGES) body.removeChild(body.firstChild);
+      trimMessages();
       body.appendChild(p);
-      scrollChat();
+      // Always bring the visitor's own message (and the replies) into view
+      scrollChat(true);
       processUserInput(text);
     }
 
@@ -1751,7 +2038,6 @@
         if (e.key === 'Enter') {
           e.preventDefault();
           sendUserMessage();
-          if (chatCharEl) { chatCharEl.textContent = ''; chatCharEl.classList.remove('visible'); }
         }
       });
       input.addEventListener('input', function () {
@@ -1761,6 +2047,8 @@
             chatCharEl.textContent = len + '/120';
             chatCharEl.classList.add('visible');
           } else {
+            // Emptied as well as hidden, so it takes up no room in the bar
+            chatCharEl.textContent = '';
             chatCharEl.classList.remove('visible');
           }
         }
@@ -1774,15 +2062,29 @@
       });
     }
 
-    // Start when chatroom scrolls into view
+    // Start when chatroom scrolls into view (once)
     var chatObserver = new IntersectionObserver(function (entries) {
       if (entries[0].isIntersecting) {
         chatObserver.disconnect();
+        chatInView = true;
         startChatSequence();
       }
     }, { threshold: 0.3 });
 
     chatObserver.observe(body);
+
+    // Pause while no part of the chat window is on screen, or the tab is in
+    // the background; carry on when it is back
+    var chatWindow = body.closest('.chatroom-window') || body;
+    var chatViewObserver = new IntersectionObserver(function (entries) {
+      chatInView = entries[entries.length - 1].isIntersecting;
+      if (chatInView) resumeChat();
+    });
+    chatViewObserver.observe(chatWindow);
+
+    document.addEventListener('visibilitychange', function () {
+      if (!document.hidden) resumeChat();
+    });
   }
 
   // --- Cursor Sparkle Trail ---
